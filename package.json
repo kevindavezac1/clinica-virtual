@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
@@ -16,7 +17,7 @@
     "bcryptjs": "^3.0.3",
     "jose": "^5.9.6",
     "jsonwebtoken": "^9.0.2",
-    "mysql2": "^3.11.5",
+    
     "next": "15.3.1",
     "pg": "^8.20.0",
     "prisma": "^7.8.0",
