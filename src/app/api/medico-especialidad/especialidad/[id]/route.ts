@@ -13,7 +13,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       },
     });
 
-    const payload = rows.map((r) => ({
+    const payload = rows.map((r: any) => ({
       id_medico: r.id_medico,
       nombre: r.medico.nombre,
       apellido: r.medico.apellido,
