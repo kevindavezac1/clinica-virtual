@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npx prisma *)",
+      "Bash(xargs ls *)",
+      "Bash(npm run *)",
+      "Bash(xargs sed -i '' 's/alert\\(\"Usuario creado con éxito\"\\)/toast\\(\"Usuario creado con éxito\"\\)/g; *)",
+      "Bash(wait)",
+      "Bash(sort -t. -k1,1)",
+      "Bash(DATABASE_URL=\"postgresql://postgres.pueoqmluqlvnusbizmyl:44025526Kd%3F@aws-1-sa-east-1.pooler.supabase.com:5432/postgres\" npx prisma db push)"
+    ]
+  }
+}

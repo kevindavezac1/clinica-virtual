@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Cobertura {
+  id       Int       @id @default(autoincrement())
+  nombre   String    @db.VarChar(100)
+  usuarios Usuario[]
+  turnos   Turno[]
+
+  @@map("cobertura")
+}
+
+model Especialidad {
+  id                    Int                  @id @default(autoincrement())
+  descripcion           String               @db.VarChar(100)
+  agendas               Agenda[]
+  medico_especialidades MedicoEspecialidad[]
+
+  @@map("especialidad")
+}
+
+model Usuario {
+  id                    Int                  @id @default(autoincrement())
+  dni                   String               @db.VarChar(20)
+  apellido              String               @db.VarChar(100)
+  nombre                String               @db.VarChar(100)
+  fecha_nacimiento      DateTime             @db.Date
+  password              String               @db.VarChar(255)
+  rol                   String               @db.VarChar(50)
+  email                 String               @db.VarChar(150)
+  telefono              String               @db.VarChar(20)
+  id_cobertura          Int?
+  cobertura             Cobertura?           @relation(fields: [id_cobertura], references: [id])
+  agendas               Agenda[]
+  turnos_paciente       Turno[]
+  medico_especialidades MedicoEspecialidad[]
+
+  @@map("usuario")
+}
+
+model Agenda {
+  id              Int          @id @default(autoincrement())
+  id_medico       Int
+  id_especialidad Int
+  fecha           DateTime     @db.Date
+  hora_entrada    String       @db.VarChar(10)
+  hora_salida     String       @db.VarChar(10)
+  medico          Usuario      @relation(fields: [id_medico], references: [id])
+  especialidad    Especialidad @relation(fields: [id_especialidad], references: [id])
+  turnos          Turno[]
+
+  @@map("agenda")
+}
+
+model Turno {
+  id           Int       @id @default(autoincrement())
+  nota         String?   @db.Text
+  estado       String    @default("Pendiente") @db.VarChar(20)
+  id_agenda    Int
+  fecha        DateTime  @db.Date
+  hora         String    @db.VarChar(10)
+  id_paciente  Int
+  id_cobertura Int
+  agenda       Agenda    @relation(fields: [id_agenda], references: [id])
+  paciente     Usuario   @relation(fields: [id_paciente], references: [id])
+  cobertura    Cobertura @relation(fields: [id_cobertura], references: [id])
+
+  @@map("turno")
+}
+
+model MedicoEspecialidad {
+  id_medico       Int
+  id_especialidad Int
+  medico          Usuario      @relation(fields: [id_medico], references: [id])
+  especialidad    Especialidad @relation(fields: [id_especialidad], references: [id])
+
+  @@id([id_medico, id_especialidad])
+  @@map("medico_especialidad")
+}
