@@ -41,21 +41,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Ya existe un usuario registrado con ese DNI" }, { status: 400 });
     }
 
-    const usuario = await prisma.usuario.create({
-      data: {
-        dni, apellido, nombre,
-        fecha_nacimiento: new Date(fecha_nacimiento),
-        password: await bcrypt.hash(password, 10),
-        rol, email, telefono,
-        id_cobertura: id_cobertura ? Number(id_cobertura) : null,
-      },
-    });
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    if (rol === "Medico" && id_especialidad) {
-      await prisma.medicoEspecialidad.create({
-        data: { id_medico: usuario.id, id_especialidad },
+    const usuario = await prisma.$transaction(async (tx) => {
+      const u = await tx.usuario.create({
+        data: {
+          dni, apellido, nombre,
+          fecha_nacimiento: new Date(fecha_nacimiento),
+          password: hashedPassword,
+          rol, email, telefono,
+          id_cobertura: id_cobertura ? Number(id_cobertura) : null,
+        },
       });
-    }
+      if (rol === "Medico" && id_especialidad) {
+        await tx.medicoEspecialidad.create({
+          data: { id_medico: u.id, id_especialidad: Number(id_especialidad) },
+        });
+      }
+      return u;
+    });
 
     return NextResponse.json({ codigo: 200, mensaje: "Usuario añadido", payload: [{ id_usuario: usuario.id }] });
   } catch (error) {

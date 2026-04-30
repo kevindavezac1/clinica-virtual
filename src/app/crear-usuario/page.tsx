@@ -7,7 +7,6 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
-interface Cobertura { id: number; nombre: string; }
 interface Especialidad { id: number; descripcion: string; }
 
 export default function CrearUsuarioPage() {
@@ -21,22 +20,17 @@ export default function CrearUsuarioPage() {
 function CrearUsuario() {
   const { token } = useAuth();
   const router = useRouter();
-  const [coberturas, setCoberturas] = useState<Cobertura[]>([]);
   const [especialidades, setEspecialidades] = useState<Especialidad[]>([]);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     dni: "", nombre: "", apellido: "", fecha_nacimiento: "", password: "",
-    rol: "Operador", email: "", telefono: "", id_cobertura: "", id_especialidad: "",
+    rol: "Operador", email: "", telefono: "", id_especialidad: "",
   });
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/coberturas").then(r => r.json()),
-      fetch("/api/especialidades", { headers: { Authorization: token! } }).then(r => r.json()),
-    ]).then(([cob, esp]) => {
-      setCoberturas(cob);
-      if (esp.payload) setEspecialidades(esp.payload);
-    });
+    fetch("/api/especialidades", { headers: { Authorization: token! } })
+      .then(r => r.json())
+      .then(esp => { if (esp.payload) setEspecialidades(esp.payload); });
   }, [token]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -47,6 +41,10 @@ function CrearUsuario() {
     e.preventDefault();
     const pwCheck = validatePassword(form.password);
     if (!pwCheck.valid) { toast(pwCheck.error!, "error"); return; }
+    if (form.rol === "Medico" && !form.id_especialidad) {
+      toast("Seleccioná una especialidad para el médico", "error");
+      return;
+    }
     setLoading(true);
     const res = await fetch("/api/usuarios", {
       method: "POST",
@@ -57,7 +55,7 @@ function CrearUsuario() {
     setLoading(false);
     if (data.codigo === 200) {
       toast("Usuario creado correctamente");
-      setForm({ dni: "", nombre: "", apellido: "", fecha_nacimiento: "", password: "", rol: "Operador", email: "", telefono: "", id_cobertura: "", id_especialidad: "" });
+      setForm({ dni: "", nombre: "", apellido: "", fecha_nacimiento: "", password: "", rol: "Operador", email: "", telefono: "", id_especialidad: "" });
     } else {
       toast("Error al crear el usuario: " + (data.error || ""), "error");
     }
@@ -69,7 +67,8 @@ function CrearUsuario() {
       <form onSubmit={handleSubmit} className="card space-y-4">
         <div className="grid grid-cols-2 gap-4">
           {[
-            { label: "DNI", name: "dni" }, { label: "Apellido", name: "apellido" },
+            { label: "DNI", name: "dni" },
+            { label: "Apellido", name: "apellido" },
             { label: "Nombre", name: "nombre" },
             { label: "Fecha de nacimiento", name: "fecha_nacimiento", type: "date" },
             { label: "Contraseña", name: "password", type: "password" },
@@ -78,7 +77,15 @@ function CrearUsuario() {
           ].map(({ label, name, type = "text" }) => (
             <div key={name}>
               <label className="label-field">{label}</label>
-              <input type={type} name={name} className="input-field" value={(form as Record<string, string>)[name]} onChange={handleChange} max={type === "date" ? new Date().toISOString().split("T")[0] : undefined} required />
+              <input
+                type={type}
+                name={name}
+                className="input-field"
+                value={(form as Record<string, string>)[name]}
+                onChange={handleChange}
+                max={type === "date" ? new Date().toISOString().split("T")[0] : undefined}
+                required
+              />
             </div>
           ))}
         </div>
@@ -99,20 +106,13 @@ function CrearUsuario() {
             </select>
           </div>
         )}
-        <div>
-          <label className="label-field">Email</label>
-          <input type="email" name="email" className="input-field" value={form.email} onChange={handleChange} required />
-        </div>
-        <div>
-          <label className="label-field">Cobertura</label>
-          <select name="id_cobertura" className="select-field" value={form.id_cobertura} onChange={handleChange} required>
-            <option value="">Seleccioná una cobertura</option>
-            {coberturas.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-          </select>
-        </div>
         <div className="flex gap-3">
-          <button type="submit" className="btn-primary flex-1" disabled={loading}>{loading ? "Creando..." : "Crear Usuario"}</button>
-          <button type="button" onClick={() => router.push("/")} className="btn-secondary flex-1">Volver al inicio</button>
+          <button type="submit" className="btn-primary flex-1" disabled={loading}>
+            {loading ? "Creando..." : "Crear Usuario"}
+          </button>
+          <button type="button" onClick={() => router.push("/")} className="btn-secondary flex-1">
+            Volver al inicio
+          </button>
         </div>
       </form>
     </div>
