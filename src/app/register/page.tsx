@@ -1,5 +1,6 @@
 "use client";
 import { toast } from "@/lib/toast";
+import { validatePassword } from "@/lib/validatePassword";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -31,6 +32,8 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    const pwCheck = validatePassword(form.password);
+    if (!pwCheck.valid) { setError(pwCheck.error!); return; }
     if (form.password !== repeatPassword) {
       setError("Las contraseñas no coinciden");
       return;
@@ -76,6 +79,7 @@ export default function RegisterPage() {
             <div>
               <label className="label-field">Contraseña</label>
               <input type="password" name="password" className="input-field" value={form.password} onChange={handleChange} required />
+              <p className="text-xs text-slate-400 mt-1">Mínimo 8 caracteres, una mayúscula y un número</p>
             </div>
             <div>
               <label className="label-field">Repetir contraseña</label>

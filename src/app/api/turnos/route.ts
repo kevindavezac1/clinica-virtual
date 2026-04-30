@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateRequest } from "@/lib/auth";
+import { sendTurnoPendiente } from "@/lib/email";
+
+function formatFecha(fecha: Date): string {
+  return fecha.toLocaleDateString("es-AR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -48,9 +53,30 @@ export async function POST(req: NextRequest) {
   try {
     await validateRequest(req);
     const { nota, id_agenda, fecha, hora, id_paciente, id_cobertura } = await req.json();
-    await prisma.turno.create({
+
+    const turno = await prisma.turno.create({
       data: { nota, id_agenda, fecha: new Date(fecha), hora, id_paciente, id_cobertura },
+      include: {
+        paciente: { select: { nombre: true, apellido: true } },
+        agenda: {
+          include: {
+            medico: { select: { nombre: true, apellido: true, email: true } },
+            especialidad: { select: { descripcion: true } },
+          },
+        },
+      },
     });
+
+    const { paciente, agenda } = turno;
+    sendTurnoPendiente(
+      agenda.medico.email,
+      `Dr/a. ${agenda.medico.nombre} ${agenda.medico.apellido}`,
+      `${paciente.nombre} ${paciente.apellido}`,
+      formatFecha(turno.fecha),
+      hora,
+      agenda.especialidad.descripcion
+    ).catch(console.error);
+
     return NextResponse.json({ codigo: 200, message: "Turno asignado correctamente", payload: [] });
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });

@@ -1,5 +1,6 @@
 "use client";
 import { toast } from "@/lib/toast";
+import { validatePassword } from "@/lib/validatePassword";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -38,6 +39,8 @@ function CrearPaciente() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    const pwCheck = validatePassword(form.password);
+    if (!pwCheck.valid) { setError(pwCheck.error!); return; }
     if (form.password !== repeatPassword) { setError("Las contraseñas no coinciden"); return; }
     setLoading(true);
     const res = await fetch("/api/usuarios", {

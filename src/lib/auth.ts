@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { NextRequest } from "next/server";
+import { randomBytes } from "crypto";
 
 const secret = new TextEncoder().encode(
   process.env.JWT_SECRET || "fallback_secret"
@@ -9,8 +10,16 @@ export async function signToken(payload: Record<string, unknown>) {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("8h")
+    .setExpirationTime("15m")
     .sign(secret);
+}
+
+export function generateRefreshToken(): string {
+  return randomBytes(64).toString("hex");
+}
+
+export function generateResetToken(): string {
+  return randomBytes(32).toString("hex");
 }
 
 export async function verifyToken(token: string) {

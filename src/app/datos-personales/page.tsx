@@ -1,5 +1,6 @@
 "use client";
 import { toast } from "@/lib/toast";
+import { validatePassword } from "@/lib/validatePassword";
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -30,7 +31,10 @@ function DatosPersonales() {
       fetch(`/api/usuarios/${user.id}`, { headers: { Authorization: token! } }).then(r => r.json()),
       fetch("/api/coberturas").then(r => r.json()),
     ]).then(([userData, coberturasData]) => {
-      if (userData.codigo === 200) setUsuario(userData.payload[0]);
+      if (userData.codigo === 200) {
+        const { password: _, ...withoutPassword } = userData.payload[0];
+        setUsuario(withoutPassword);
+      }
       setCoberturas(coberturasData);
     }).finally(() => setLoading(false));
   }, [user, token]);
@@ -40,6 +44,10 @@ function DatosPersonales() {
   };
 
   const handleSave = async () => {
+    if (usuario.password && usuario.password.trim() !== "") {
+      const pwCheck = validatePassword(usuario.password);
+      if (!pwCheck.valid) { toast(pwCheck.error!, "error"); return; }
+    }
     const res = await fetch(`/api/usuarios/${user!.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: token! },

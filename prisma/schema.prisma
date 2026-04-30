@@ -39,8 +39,31 @@ model Usuario {
   agendas               Agenda[]
   turnos_paciente       Turno[]
   medico_especialidades MedicoEspecialidad[]
+  refresh_tokens        RefreshToken[]
+  password_reset_tokens PasswordResetToken[]
 
   @@map("usuario")
+}
+
+model RefreshToken {
+  id         Int      @id @default(autoincrement())
+  token      String   @unique @db.VarChar(500)
+  id_usuario Int
+  expires_at DateTime
+  usuario    Usuario  @relation(fields: [id_usuario], references: [id])
+
+  @@map("refresh_token")
+}
+
+model PasswordResetToken {
+  id         Int      @id @default(autoincrement())
+  token      String   @unique @db.VarChar(255)
+  id_usuario Int
+  expires_at DateTime
+  used       Boolean  @default(false)
+  usuario    Usuario  @relation(fields: [id_usuario], references: [id])
+
+  @@map("password_reset_token")
 }
 
 model Agenda {

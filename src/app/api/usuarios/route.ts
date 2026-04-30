@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateRequest } from "@/lib/auth";
+import { validatePassword } from "@/lib/validatePassword";
+import { sanitizeString } from "@/lib/sanitize";
 import bcrypt from "bcryptjs";
 
 export async function GET(req: NextRequest) {
@@ -21,7 +23,18 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { dni, apellido, nombre, fecha_nacimiento, password, rol, email, telefono, id_cobertura, id_especialidad } = await req.json();
+    const body = await req.json();
+    const dni = sanitizeString(body.dni);
+    const apellido = sanitizeString(body.apellido);
+    const nombre = sanitizeString(body.nombre);
+    const email = sanitizeString(body.email);
+    const telefono = sanitizeString(body.telefono);
+    const { fecha_nacimiento, password, rol, id_cobertura, id_especialidad } = body;
+
+    const pwCheck = validatePassword(password ?? "");
+    if (!pwCheck.valid) {
+      return NextResponse.json({ error: pwCheck.error }, { status: 400 });
+    }
 
     const existente = await prisma.usuario.findFirst({ where: { dni } });
     if (existente) {
@@ -32,7 +45,8 @@ export async function POST(req: NextRequest) {
       data: {
         dni, apellido, nombre,
         fecha_nacimiento: new Date(fecha_nacimiento),
-        password: await bcrypt.hash(password, 10), rol, email, telefono,
+        password: await bcrypt.hash(password, 10),
+        rol, email, telefono,
         id_cobertura: id_cobertura ? Number(id_cobertura) : null,
       },
     });

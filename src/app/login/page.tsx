@@ -119,12 +119,19 @@ export default function LoginPage() {
 
           <div className="divider" />
 
-          <p className="text-center text-sm text-slate-500">
-            ¿No tenés cuenta?{" "}
-            <Link href="/register" className="text-brand-700 font-semibold hover:underline">
-              Registrate aquí
-            </Link>
-          </p>
+          <div className="space-y-2 text-center text-sm text-slate-500">
+            <p>
+              <Link href="/forgot-password" className="text-brand-700 hover:underline">
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </p>
+            <p>
+              ¿No tenés cuenta?{" "}
+              <Link href="/register" className="text-brand-700 font-semibold hover:underline">
+                Registrate aquí
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>

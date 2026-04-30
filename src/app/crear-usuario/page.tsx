@@ -1,5 +1,6 @@
 "use client";
 import { toast } from "@/lib/toast";
+import { validatePassword } from "@/lib/validatePassword";
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -44,6 +45,8 @@ function CrearUsuario() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const pwCheck = validatePassword(form.password);
+    if (!pwCheck.valid) { toast(pwCheck.error!, "error"); return; }
     setLoading(true);
     const res = await fetch("/api/usuarios", {
       method: "POST",
