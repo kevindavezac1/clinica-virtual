@@ -19,6 +19,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     }
     return NextResponse.json({ codigo: -1, mensaje: "Usuario no encontrado", payload: [] });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: (error as { status?: number }).status ?? 500 });
   }
 }

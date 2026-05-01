@@ -6,7 +6,7 @@ export async function GET() {
     const rows = await prisma.especialidad.findMany({ select: { id: true, descripcion: true } });
     return NextResponse.json({ codigo: 200, mensaje: "OK", payload: rows });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: (error as { status?: number }).status ?? 500 });
   }
 }
 
@@ -16,6 +16,6 @@ export async function POST(req: NextRequest) {
     await prisma.especialidad.create({ data: { descripcion } });
     return NextResponse.json({ message: "Especialidad creada correctamente" });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: (error as { status?: number }).status ?? 500 });
   }
 }

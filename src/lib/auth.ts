@@ -6,6 +6,14 @@ const secret = new TextEncoder().encode(
   process.env.JWT_SECRET || "fallback_secret"
 );
 
+export class AuthError extends Error {
+  readonly status = 401;
+  constructor(message: string) {
+    super(message);
+    this.name = "AuthError";
+  }
+}
+
 export async function signToken(payload: Record<string, unknown>) {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
@@ -33,6 +41,10 @@ export function getTokenFromRequest(req: NextRequest): string | null {
 
 export async function validateRequest(req: NextRequest) {
   const token = getTokenFromRequest(req);
-  if (!token) throw new Error("Token no proporcionado");
-  return verifyToken(token);
+  if (!token) throw new AuthError("Token no proporcionado");
+  try {
+    return await verifyToken(token);
+  } catch {
+    throw new AuthError("Token inválido o expirado");
+  }
 }

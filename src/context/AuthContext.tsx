@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "@/lib/toast";
 
 interface AuthUser {
   id: number;
@@ -34,10 +35,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const router = useRouter();
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const warnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearRefreshTimer = () => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    if (warnTimerRef.current) clearTimeout(warnTimerRef.current);
     refreshTimerRef.current = null;
+    warnTimerRef.current = null;
   };
 
   const setAuth = useCallback((newToken: string, newUser: AuthUser) => {
@@ -55,14 +59,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearRefreshTimer();
   }, []);
 
+  const sessionExpired = useCallback(() => {
+    const wasLoggedIn = !!localStorage.getItem("token");
+    clearAuth();
+    if (wasLoggedIn) {
+      toast("Tu sesión expiró. Vas a ser redirigido al login.", "error");
+      setTimeout(() => router.push("/login"), 3000);
+    }
+  }, [clearAuth, router]);
+
   const scheduleRefresh = useCallback((currentToken: string, doRefresh: () => void) => {
     clearRefreshTimer();
     const exp = getTokenExpiry(currentToken);
     if (!exp) return;
-    const delay = exp - Date.now() - 60_000; // refresh 1min before expiry
-    if (delay > 0) {
-      refreshTimerRef.current = setTimeout(doRefresh, delay);
-    }
+    const msLeft = exp - Date.now();
+    if (msLeft <= 0) { doRefresh(); return; }
+    // Warning at 60%, refresh at 80%
+    warnTimerRef.current = setTimeout(() => {
+      toast("Tu sesión está por expirar.", "warning");
+    }, msLeft * 0.6);
+    refreshTimerRef.current = setTimeout(doRefresh, msLeft * 0.8);
   }, []);
 
   useEffect(() => {
@@ -82,9 +98,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return;
           }
         }
-        clearAuth();
+        sessionExpired();
       } catch {
-        clearAuth();
+        sessionExpired();
       }
     };
 
@@ -121,10 +137,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               scheduleRefresh(d.token, doRefresh);
             }
           } else {
-            clearAuth();
+            sessionExpired();
           }
         } catch {
-          clearAuth();
+          sessionExpired();
         }
       };
       scheduleRefresh(data.jwt, doRefresh);

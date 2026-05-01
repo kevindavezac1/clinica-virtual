@@ -11,6 +11,7 @@ interface Turno {
   nombre_paciente: string;
   fecha_nacimiento: string;
   nota?: string;
+  nota_medico?: string;
   fecha: string;
   estado: string;
   cobertura: string;
@@ -52,6 +53,9 @@ function TurnosProgramados() {
   const [selected, setSelected] = useState<Turno | null>(null);
   const [loading, setLoading] = useState(false);
   const [cambiando, setCambiando] = useState<number | null>(null);
+  const [editandoNota, setEditandoNota] = useState<number | null>(null);
+  const [notaTexto, setNotaTexto] = useState("");
+  const [guardandoNota, setGuardandoNota] = useState(false);
 
   const cargar = async (f: string) => {
     if (!user) return;
@@ -75,6 +79,24 @@ function TurnosProgramados() {
   };
 
   useEffect(() => { cargar(fecha); }, [user, fecha]);
+
+  const abrirNota = (t: Turno) => {
+    setEditandoNota(t.id_turno);
+    setNotaTexto(t.nota_medico ?? "");
+    setSelected(null);
+  };
+
+  const guardarNota = async (id: number) => {
+    setGuardandoNota(true);
+    await fetch(`/api/turnos/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: token! },
+      body: JSON.stringify({ nota_medico: notaTexto }),
+    });
+    setGuardandoNota(false);
+    setEditandoNota(null);
+    cargar(fecha);
+  };
 
   const cambiarEstado = async (id: number, estado: string) => {
     setCambiando(id);
@@ -118,12 +140,18 @@ function TurnosProgramados() {
                     <td className="table-cell">{calcularEdad(t.fecha_nacimiento)}</td>
                     <td className="table-cell">{estadoBadge(t.estado ?? "Pendiente")}</td>
                     <td className="table-cell">
-                      <div className="flex gap-2 items-center">
+                      <div className="flex gap-2 items-center flex-wrap">
                         <button
                           onClick={() => setSelected(selected?.id_turno === t.id_turno ? null : t)}
                           className="text-blue-600 hover:underline text-xs"
                         >
                           {selected?.id_turno === t.id_turno ? "Ocultar" : "Ver notas"}
+                        </button>
+                        <button
+                          onClick={() => abrirNota(t)}
+                          className="text-indigo-600 hover:underline text-xs"
+                        >
+                          {t.nota_medico ? "Editar nota" : "Agregar nota"}
                         </button>
                         {t.estado !== "Confirmado" && t.estado !== "Cancelado" && (
                           <button
@@ -150,7 +178,39 @@ function TurnosProgramados() {
                     <tr key={`nota-${t.id_turno}`}>
                       <td colSpan={5} className="px-4 py-3 bg-blue-50 text-sm text-gray-700 border-b">
                         <p><strong>Cobertura:</strong> {t.cobertura}</p>
-                        <p><strong>Notas:</strong> {t.nota || "No hay notas disponibles."}</p>
+                        <p><strong>Motivo de consulta:</strong> {t.nota || "Sin notas del paciente."}</p>
+                        {t.nota_medico && (
+                          <p className="mt-1"><strong>Nota clínica:</strong> {t.nota_medico}</p>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                  {editandoNota === t.id_turno && (
+                    <tr key={`edit-nota-${t.id_turno}`}>
+                      <td colSpan={5} className="px-4 py-3 bg-indigo-50 border-b">
+                        <p className="text-xs font-semibold text-indigo-700 mb-2">Nota clínica — {t.nombre_paciente}</p>
+                        <textarea
+                          className="w-full border border-indigo-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"
+                          rows={4}
+                          placeholder="Diagnóstico, indicaciones, observaciones..."
+                          value={notaTexto}
+                          onChange={e => setNotaTexto(e.target.value)}
+                        />
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            onClick={() => guardarNota(t.id_turno)}
+                            disabled={guardandoNota}
+                            className="btn-primary text-xs px-4 py-1.5 disabled:opacity-50"
+                          >
+                            {guardandoNota ? "Guardando..." : "Guardar nota"}
+                          </button>
+                          <button
+                            onClick={() => setEditandoNota(null)}
+                            className="btn-secondary text-xs px-4 py-1.5"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   )}

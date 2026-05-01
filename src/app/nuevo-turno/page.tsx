@@ -38,6 +38,7 @@ function NuevoTurno() {
   const [horasDisponibles, setHorasDisponibles] = useState<string[]>([]);
   const [idAgenda, setIdAgenda] = useState<number | null>(null);
   const [aviso, setAviso] = useState("");
+  const [feriados, setFeriados] = useState<Set<string>>(new Set());
 
   const [form, setForm] = useState({
     especialidad: "", profesional: "", fecha: "", hora: "", notas: "",
@@ -49,6 +50,10 @@ function NuevoTurno() {
       .then(r => r.json()).then(d => { if (d.payload) setCobertura(d.payload); });
     fetch("/api/especialidades", { headers: { Authorization: token! } })
       .then(r => r.json()).then(d => { if (d.payload) setEspecialidades(d.payload); });
+    fetch("/api/feriados", { headers: { Authorization: token! } })
+      .then(r => r.json()).then(d => {
+        if (d.payload) setFeriados(new Set(d.payload.map((f: { fecha: string }) => f.fecha)));
+      });
   }, [user, token]);
 
   const onEspecialidadChange = async (id: string) => {
@@ -70,6 +75,7 @@ function NuevoTurno() {
     setAviso("");
     setHorasDisponibles([]);
     if (!fecha || !form.profesional) return;
+    if (feriados.has(fecha)) { setAviso("Esta fecha es feriado nacional. No se pueden asignar turnos."); return; }
     const [agendaRes, turnosRes] = await Promise.all([
       fetch(`/api/agenda/medico/${form.profesional}`, { headers: { Authorization: token! } }).then(r => r.json()),
       fetch("/api/turnos/medico", { method: "POST", headers: { "Content-Type": "application/json", Authorization: token! }, body: JSON.stringify({ id_medico: Number(form.profesional), fecha }) }).then(r => r.json()),
@@ -84,10 +90,14 @@ function NuevoTurno() {
     const todayAR = new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
     const ahoraAR = new Date().toLocaleTimeString("en-GB", { timeZone: "America/Argentina/Buenos_Aires", hour: "2-digit", minute: "2-digit" });
 
+    const ahora = new Date();
     const disponibles = agendaFecha
       .flatMap((a: Record<string, string>) => generarHoras(a.hora_entrada, a.hora_salida))
       .filter((h: string) => !ocupadas.includes(h))
-      .filter((h: string) => fecha !== todayAR || h > ahoraAR);
+      .filter((h: string) => {
+        const turnoDateTime = new Date(`${fecha}T${h}:00-03:00`);
+        return (turnoDateTime.getTime() - ahora.getTime()) >= 30 * 60_000;
+      });
 
     if (disponibles.length === 0) { setAviso("No hay horarios disponibles para este día."); return; }
     setHorasDisponibles(disponibles);
@@ -102,7 +112,7 @@ function NuevoTurno() {
     if (data.codigo === 200) {
       toast(`Turno confirmado el ${form.fecha} a las ${form.hora}`);
       router.push("/");
-    } else toast("Error al asignar el turno", "error");
+    } else toast(data.mensaje || "Error al asignar el turno", "error");
   };
 
   return (

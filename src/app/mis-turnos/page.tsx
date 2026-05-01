@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Link from "next/link";
+import { toast } from "@/lib/toast";
 
 interface Turno {
   id_turno: number;
@@ -98,18 +99,29 @@ function MisTurnos() {
     });
   };
 
+  const puedeCancel = (t: Turno) => {
+    const turnoMs2 = new Date(`${t.fecha.split("T")[0]}T${t.hora}:00-03:00`).getTime();
+    return (turnoMs2 - Date.now()) >= 24 * 3_600_000;
+  };
+
   const cancelarTurno = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!confirm("¿Confirmás que querés cancelar este turno?")) return;
     setCancelando(id);
-    await fetch(`/api/turnos/${id}`, {
+    const res = await fetch(`/api/turnos/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: token! },
       body: JSON.stringify({ estado: "Cancelado" }),
     });
+    const data = await res.json();
     setCancelando(null);
-    setSelected(null);
-    cargarTurnos();
+    if (data.codigo === 200) {
+      toast("Turno cancelado correctamente");
+      setSelected(null);
+      cargarTurnos();
+    } else {
+      toast(data.mensaje || "No se pudo cancelar el turno", "error");
+    }
   };
 
   if (loading) return <p className="text-center py-12 text-gray-500">Cargando turnos...</p>;
@@ -157,15 +169,22 @@ function MisTurnos() {
                   <p><span className="font-medium">Especialista:</span> {turno.nombre_medico} {turno.apellido_medico}</p>
                   <p><span className="font-medium">Especialidad:</span> {turno.especialidad}</p>
                   {turno.nota && <p><span className="font-medium">Nota:</span> {turno.nota}</p>}
-                  <div className="flex gap-3 mt-3">
+                  <div className="flex gap-3 mt-3 flex-wrap">
                     {tab === "proximos" && turno.estado !== "Cancelado" && (
-                      <button
-                        onClick={e => cancelarTurno(turno.id_turno, e)}
-                        disabled={cancelando === turno.id_turno}
-                        className="text-sm text-red-600 hover:underline disabled:opacity-50"
-                      >
-                        {cancelando === turno.id_turno ? "Cancelando..." : "Cancelar turno"}
-                      </button>
+                      puedeCancel(turno) ? (
+                        <button
+                          onClick={e => cancelarTurno(turno.id_turno, e)}
+                          disabled={cancelando === turno.id_turno}
+                          className="text-sm text-red-600 hover:underline disabled:opacity-50"
+                        >
+                          {cancelando === turno.id_turno ? "Cancelando..." : "Cancelar turno"}
+                        </button>
+                      ) : (
+                        <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 leading-snug">
+                          Para cancelar con menos de 24hs llamá al consultorio:<br />
+                          <span className="font-semibold">+54 3496 417428</span>
+                        </p>
+                      )
                     )}
                     <button
                       onClick={e => { e.stopPropagation(); setSelected(null); }}

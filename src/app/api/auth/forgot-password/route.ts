@@ -30,6 +30,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ codigo: 200, mensaje: "Si el email existe, recibirás un enlace de recuperación." });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: (error as { status?: number }).status ?? 500 });
   }
 }

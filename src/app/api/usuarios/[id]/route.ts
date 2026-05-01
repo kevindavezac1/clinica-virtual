@@ -24,7 +24,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       payload: [{ ...rest, nombre_cobertura: cobertura?.nombre ?? null }],
     });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: (error as { status?: number }).status ?? 500 });
   }
 }
 
@@ -58,6 +58,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     return NextResponse.json({ codigo: 200, mensaje: "Usuario modificado", payload: [] });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: (error as { status?: number }).status ?? 500 });
   }
 }

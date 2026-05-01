@@ -11,6 +11,6 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ codigo: 200, mensaje: "OK", payload: [{ id_agenda: agenda.id }] });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: (error as { status?: number }).status ?? 500 });
   }
 }

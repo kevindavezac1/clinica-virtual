@@ -54,6 +54,6 @@ export async function POST(req: NextRequest) {
       omitidos: entries.length - nuevas.length,
     });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: (error as { status?: number }).status ?? 500 });
   }
 }

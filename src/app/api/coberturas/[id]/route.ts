@@ -8,7 +8,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     await prisma.cobertura.update({ where: { id: Number(id) }, data: { nombre } });
     return NextResponse.json({ message: "Cobertura actualizada correctamente" });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: (error as { status?: number }).status ?? 500 });
   }
 }
 
@@ -22,6 +22,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     await prisma.cobertura.delete({ where: { id: Number(id) } });
     return NextResponse.json({ message: "Cobertura eliminada correctamente" });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: (error as { status?: number }).status ?? 500 });
   }
 }

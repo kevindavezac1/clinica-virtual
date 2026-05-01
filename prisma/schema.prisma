@@ -83,6 +83,7 @@ model Agenda {
 model Turno {
   id           Int       @id @default(autoincrement())
   nota         String?   @db.Text
+  nota_medico  String?   @db.Text
   estado       String    @default("Pendiente") @db.VarChar(20)
   id_agenda    Int
   fecha        DateTime  @db.Date
@@ -94,6 +95,14 @@ model Turno {
   cobertura    Cobertura @relation(fields: [id_cobertura], references: [id])
 
   @@map("turno")
+}
+
+model Feriado {
+  id          Int      @id @default(autoincrement())
+  fecha       DateTime @unique @db.Date
+  descripcion String   @db.VarChar(150)
+
+  @@map("feriado")
 }
 
 model MedicoEspecialidad {

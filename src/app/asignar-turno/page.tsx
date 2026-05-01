@@ -40,6 +40,7 @@ function AsignarTurno() {
   const [agenda, setAgenda] = useState<Record<string, unknown>[]>([]);
   const [idAgenda, setIdAgenda] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const [feriados, setFeriados] = useState<Set<string>>(new Set());
   const [form, setForm] = useState({
     paciente: "", cobertura: "", especialidad: "", profesional: "", fecha: "", hora: "", notas: "",
   });
@@ -48,9 +49,11 @@ function AsignarTurno() {
     Promise.all([
       fetch("/api/especialidades", { headers: { Authorization: token! } }).then(r => r.json()),
       fetch("/api/usuarios", { headers: { Authorization: token! } }).then(r => r.json()),
-    ]).then(([espData, usersData]) => {
+      fetch("/api/feriados", { headers: { Authorization: token! } }).then(r => r.json()),
+    ]).then(([espData, usersData, feriadosData]) => {
       if (espData.payload) setEspecialidades(espData.payload);
       if (usersData.payload) setPacientes(usersData.payload.filter((u: Paciente) => u.rol === "Paciente"));
+      if (feriadosData.payload) setFeriados(new Set(feriadosData.payload.map((f: { fecha: string }) => f.fecha)));
     });
   }, [token]);
 
@@ -81,7 +84,7 @@ function AsignarTurno() {
     const today = new Date().toISOString().split("T")[0];
     const fechas = ag
       .map((a: Record<string, string>) => new Date(a.fecha).toISOString().split("T")[0])
-      .filter((f: string) => f >= today);
+      .filter((f: string) => f >= today && !feriados.has(f));
     setFechasDisponibles([...new Set(fechas)] as string[]);
   };
 
@@ -114,10 +117,14 @@ function AsignarTurno() {
     const todasHoras = agendaFecha.flatMap((a: Record<string, unknown>) =>
       generarHoras(a.hora_entrada as string, a.hora_salida as string)
     );
+    const ahora = new Date();
     setHorasDisponibles(
       todasHoras
         .filter(h => !ocupadas.includes(h))
-        .filter(h => fecha !== todayAR || h > ahoraAR)
+        .filter(h => {
+          const turnoDateTime = new Date(`${fecha}T${h}:00-03:00`);
+          return (turnoDateTime.getTime() - ahora.getTime()) >= 30 * 60_000;
+        })
     );
   };
 
@@ -132,7 +139,7 @@ function AsignarTurno() {
     const res = await fetch("/api/turnos", { method: "POST", headers: { "Content-Type": "application/json", Authorization: token! }, body: JSON.stringify(turnoData) });
     const data = await res.json();
     if (data.codigo === 200) { toast("Turno asignado correctamente"); router.push("/"); }
-    else setError(data.error || "Error al asignar el turno");
+    else setError(data.mensaje || data.error || "Error al asignar el turno");
   };
 
   return (

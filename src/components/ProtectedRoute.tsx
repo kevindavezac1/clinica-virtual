@@ -7,25 +7,31 @@ import { useEffect } from "react";
 
 interface Props {
   children: React.ReactNode;
-  allowedRole?: string;
+  allowedRole?: string | string[];
 }
 
 export default function ProtectedRoute({ children, allowedRole }: Props) {
   const { isLoggedIn, user } = useAuth();
   const router = useRouter();
 
+  const allowed = !allowedRole || (
+    Array.isArray(allowedRole)
+      ? allowedRole.includes(user?.rol ?? "")
+      : user?.rol === allowedRole
+  );
+
   useEffect(() => {
     if (!isLoggedIn) {
       router.push("/");
       return;
     }
-    if (allowedRole && user?.rol !== allowedRole) {
+    if (!allowed) {
       toast("No tenés permisos para acceder a esta página", "error");
       router.push("/");
     }
-  }, [isLoggedIn, user, allowedRole, router]);
+  }, [isLoggedIn, allowed, router]);
 
-  if (!isLoggedIn || (allowedRole && user?.rol !== allowedRole)) {
+  if (!isLoggedIn || !allowed) {
     return null;
   }
 

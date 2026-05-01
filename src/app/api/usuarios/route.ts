@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     }));
     return NextResponse.json({ codigo: 200, mensaje: "OK", payload });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: (error as { status?: number }).status ?? 500 });
   }
 }
 
@@ -63,6 +63,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ codigo: 200, mensaje: "Usuario añadido", payload: [{ id_usuario: usuario.id }] });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: (error as { status?: number }).status ?? 500 });
   }
 }
