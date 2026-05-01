@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 
 interface Especialidad { id: number; descripcion: string; }
 interface Profesional { id_medico: number; nombre: string; apellido: string; }
-interface Paciente { id: number; nombre: string; apellido: string; rol: string; }
+interface Paciente { id: number; nombre: string; apellido: string; rol: string; dni: string; }
 
 function generarHoras(entrada: string, salida: string): string[] {
   const horas: string[] = [];
@@ -34,13 +34,19 @@ function AsignarTurno() {
   const router = useRouter();
   const [especialidades, setEspecialidades] = useState<Especialidad[]>([]);
   const [profesionales, setProfesionales] = useState<Profesional[]>([]);
-  const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [fechasDisponibles, setFechasDisponibles] = useState<string[]>([]);
   const [horasDisponibles, setHorasDisponibles] = useState<string[]>([]);
   const [agenda, setAgenda] = useState<Record<string, unknown>[]>([]);
   const [idAgenda, setIdAgenda] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [feriados, setFeriados] = useState<Set<string>>(new Set());
+
+  const [busquedaPaciente, setBusquedaPaciente] = useState("");
+  const [sugerencias, setSugerencias] = useState<Paciente[]>([]);
+  const [pacienteSeleccionado, setPacienteSeleccionado] = useState<Paciente | null>(null);
+  const [coberturaNombre, setCoberturaNombre] = useState("");
+  const [buscando, setBuscando] = useState(false);
+
   const [form, setForm] = useState({
     paciente: "", cobertura: "", especialidad: "", profesional: "", fecha: "", hora: "", notas: "",
   });
@@ -48,20 +54,53 @@ function AsignarTurno() {
   useEffect(() => {
     Promise.all([
       fetch("/api/especialidades", { headers: { Authorization: token! } }).then(r => r.json()),
-      fetch("/api/usuarios", { headers: { Authorization: token! } }).then(r => r.json()),
       fetch("/api/feriados", { headers: { Authorization: token! } }).then(r => r.json()),
-    ]).then(([espData, usersData, feriadosData]) => {
+    ]).then(([espData, feriadosData]) => {
       if (espData.payload) setEspecialidades(espData.payload);
-      if (usersData.payload) setPacientes(usersData.payload.filter((u: Paciente) => u.rol === "Paciente"));
       if (feriadosData.payload) setFeriados(new Set(feriadosData.payload.map((f: { fecha: string }) => f.fecha)));
     });
   }, [token]);
 
-  const onPacienteChange = async (id: string) => {
-    setForm(f => ({ ...f, paciente: id, cobertura: "" }));
-    if (!id) return;
-    const d = await fetch(`/api/coberturas/usuario/${id}`, { headers: { Authorization: token! } }).then(r => r.json());
-    if (d.payload) setForm(f => ({ ...f, cobertura: String(d.payload.id) }));
+  useEffect(() => {
+    if (busquedaPaciente.length < 2) { setSugerencias([]); return; }
+    const t = setTimeout(async () => {
+      setBuscando(true);
+      const res = await fetch("/api/usuarios", { headers: { Authorization: token! } }).then(r => r.json());
+      if (res.payload) {
+        const q = busquedaPaciente.toLowerCase();
+        setSugerencias(
+          (res.payload as Paciente[])
+            .filter(u => u.rol === "Paciente" && (
+              `${u.apellido} ${u.nombre}`.toLowerCase().includes(q) ||
+              u.dni?.includes(q)
+            ))
+            .slice(0, 8)
+        );
+      }
+      setBuscando(false);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [busquedaPaciente, token]);
+
+  const seleccionarPaciente = async (p: Paciente) => {
+    setPacienteSeleccionado(p);
+    setBusquedaPaciente("");
+    setSugerencias([]);
+    setCoberturaNombre("");
+    setForm(f => ({ ...f, paciente: String(p.id), cobertura: "" }));
+    const d = await fetch(`/api/coberturas/usuario/${p.id}`, { headers: { Authorization: token! } }).then(r => r.json());
+    if (d.payload) {
+      setForm(f => ({ ...f, cobertura: String(d.payload.id) }));
+      setCoberturaNombre(d.payload.nombre);
+    }
+  };
+
+  const limpiarPaciente = () => {
+    setPacienteSeleccionado(null);
+    setBusquedaPaciente("");
+    setSugerencias([]);
+    setCoberturaNombre("");
+    setForm(f => ({ ...f, paciente: "", cobertura: "" }));
   };
 
   const onEspecialidadChange = async (id: string) => {
@@ -111,9 +150,6 @@ function AsignarTurno() {
       .filter((t: Record<string, string>) => t.estado !== "Cancelado")
       .map((t: Record<string, string>) => t.hora.padStart(5, "0"));
 
-    const todayAR = new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
-    const ahoraAR = new Date().toLocaleTimeString("en-GB", { timeZone: "America/Argentina/Buenos_Aires", hour: "2-digit", minute: "2-digit" });
-
     const todasHoras = agendaFecha.flatMap((a: Record<string, unknown>) =>
       generarHoras(a.hora_entrada as string, a.hora_salida as string)
     );
@@ -131,6 +167,7 @@ function AsignarTurno() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    if (!pacienteSeleccionado) { setError("Seleccioná un paciente."); return; }
     if (!idAgenda) { setError("Seleccioná una fecha y hora válidas."); return; }
     const turnoData = {
       nota: form.notas, id_agenda: idAgenda, fecha: form.fecha, hora: form.hora,
@@ -146,17 +183,57 @@ function AsignarTurno() {
     <div className="max-w-lg mx-auto">
       <h1 className="page-title">Asignar Turno</h1>
       <form onSubmit={handleSubmit} className="card space-y-4">
+
+        {/* Buscador de paciente */}
         <div>
           <label className="label-field">Paciente</label>
-          <select className="select-field" value={form.paciente} onChange={e => onPacienteChange(e.target.value)} required>
-            <option value="">Seleccioná un paciente</option>
-            {pacientes.map(p => <option key={p.id} value={p.id}>{p.apellido}, {p.nombre}</option>)}
-          </select>
+          {pacienteSeleccionado ? (
+            <div className="input-field bg-gray-50 flex items-center justify-between">
+              <span className="text-gray-800 font-medium">
+                {pacienteSeleccionado.apellido}, {pacienteSeleccionado.nombre}
+                <span className="ml-2 text-gray-400 font-normal text-xs">DNI {pacienteSeleccionado.dni}</span>
+              </span>
+              <button type="button" onClick={limpiarPaciente} className="text-gray-400 hover:text-gray-600 ml-2 text-sm">✕</button>
+            </div>
+          ) : (
+            <div className="relative">
+              <input
+                type="text"
+                className="input-field"
+                placeholder="Buscá por nombre, apellido o DNI..."
+                value={busquedaPaciente}
+                onChange={e => setBusquedaPaciente(e.target.value)}
+              />
+              {buscando && <p className="text-xs text-gray-400 mt-1">Buscando...</p>}
+              {sugerencias.length > 0 && (
+                <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 divide-y divide-gray-100">
+                  {sugerencias.map(p => (
+                    <li key={p.id}>
+                      <button
+                        type="button"
+                        onClick={() => seleccionarPaciente(p)}
+                        className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm"
+                      >
+                        <span className="font-semibold text-gray-800">{p.apellido}, {p.nombre}</span>
+                        <span className="ml-2 text-gray-400 text-xs">DNI {p.dni}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
+
         <div>
           <label className="label-field">Cobertura</label>
-          <input className="input-field bg-gray-50" value={form.cobertura ? `Cobertura ID: ${form.cobertura}` : "Se carga al elegir paciente"} readOnly />
+          <input
+            className="input-field bg-gray-50"
+            value={coberturaNombre || (pacienteSeleccionado ? "Cargando..." : "Se carga al elegir paciente")}
+            readOnly
+          />
         </div>
+
         <div>
           <label className="label-field">Especialidad</label>
           <select className="select-field" value={form.especialidad} onChange={e => onEspecialidadChange(e.target.value)} required>
