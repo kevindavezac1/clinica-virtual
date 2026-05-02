@@ -5,13 +5,16 @@ import { validateRequest } from "@/lib/auth";
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const turnosCount = await prisma.turno.count({ where: { id_agenda: Number(id) } });
-    if (turnosCount > 0) {
+    const turnosActivos = await prisma.turno.count({
+      where: { id_agenda: Number(id), estado: { not: "Cancelado" } },
+    });
+    if (turnosActivos > 0) {
       return NextResponse.json(
-        { error: `No se puede eliminar: hay ${turnosCount} turno${turnosCount > 1 ? "s" : ""} asignado${turnosCount > 1 ? "s" : ""} para este día` },
+        { error: `No se puede eliminar: hay ${turnosActivos} turno${turnosActivos > 1 ? "s" : ""} activo${turnosActivos > 1 ? "s" : ""} para este día` },
         { status: 400 }
       );
     }
+    await prisma.turno.deleteMany({ where: { id_agenda: Number(id), estado: "Cancelado" } });
     await prisma.agenda.delete({ where: { id: Number(id) } });
     return NextResponse.json({ codigo: 200, mensaje: "Horario eliminado", payload: [] });
   } catch (error) {
@@ -23,7 +26,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     await validateRequest(req);
     const { id } = await params;
-    const { id_medico, id_especialidad, fecha, hora_entrada, hora_salida } = await req.json();
+    const { id_medico, id_especialidad, fecha, hora_entrada, hora_salida, duracion = 30 } = await req.json();
 
     const existing = await prisma.agenda.findUnique({ where: { id: Number(id) } });
     if (!existing) {
@@ -32,7 +35,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     await prisma.agenda.update({
       where: { id: Number(id) },
-      data: { id_medico, id_especialidad, fecha: new Date(fecha), hora_entrada, hora_salida },
+      data: { id_medico, id_especialidad, fecha: new Date(fecha), hora_entrada, hora_salida, duracion },
     });
 
     return NextResponse.json({ codigo: 200, mensaje: "Agenda modificada", payload: [] });

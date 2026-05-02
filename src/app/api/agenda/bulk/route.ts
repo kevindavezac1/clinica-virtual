@@ -8,6 +8,7 @@ interface EntradaAgenda {
   fecha: string;
   hora_entrada: string;
   hora_salida: string;
+  duracion: number;
 }
 
 export async function POST(req: NextRequest) {
@@ -18,21 +19,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No se enviaron entradas" }, { status: 400 });
     }
 
-    // Fetch existing agendas for this doctor to skip duplicates
+    // Skip any date where this doctor already has an agenda entry
     const idMedico = entries[0].id_medico;
     const fechas = entries.map(e => new Date(e.fecha));
     const existentes = await prisma.agenda.findMany({
       where: { id_medico: idMedico, fecha: { in: fechas } },
-      select: { fecha: true, hora_entrada: true, hora_salida: true },
+      select: { fecha: true },
     });
-    const existentesSet = new Set(
-      existentes.map(a => `${a.fecha.toISOString().split("T")[0]}_${a.hora_entrada}_${a.hora_salida}`)
+    const fechasOcupadas = new Set(
+      existentes.map(a => a.fecha.toISOString().split("T")[0])
     );
 
-    const nuevas = entries.filter(e => {
-      const key = `${e.fecha}_${e.hora_entrada}_${e.hora_salida}`;
-      return !existentesSet.has(key);
-    });
+    const nuevas = entries.filter(e => !fechasOcupadas.has(e.fecha));
 
     if (nuevas.length > 0) {
       await prisma.agenda.createMany({
@@ -42,6 +40,7 @@ export async function POST(req: NextRequest) {
           fecha: new Date(e.fecha),
           hora_entrada: e.hora_entrada,
           hora_salida: e.hora_salida,
+          duracion: e.duracion,
         })),
         skipDuplicates: true,
       });

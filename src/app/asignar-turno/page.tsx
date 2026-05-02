@@ -10,13 +10,13 @@ interface Especialidad { id: number; descripcion: string; }
 interface Profesional { id_medico: number; nombre: string; apellido: string; }
 interface Paciente { id: number; nombre: string; apellido: string; rol: string; dni: string; }
 
-function generarHoras(entrada: string, salida: string): string[] {
+function generarHoras(entrada: string, salida: string, duracion: number): string[] {
   const horas: string[] = [];
   const start = new Date(`1970-01-01T${entrada}:00`);
   const end = new Date(`1970-01-01T${salida}:00`);
   while (start < end) {
     horas.push(`${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`);
-    start.setMinutes(start.getMinutes() + 30);
+    start.setMinutes(start.getMinutes() + duracion);
   }
   return horas;
 }
@@ -150,12 +150,14 @@ function AsignarTurno() {
       .filter((t: Record<string, string>) => t.estado !== "Cancelado")
       .map((t: Record<string, string>) => t.hora.padStart(5, "0"));
 
-    const todasHoras = agendaFecha.flatMap((a: Record<string, unknown>) =>
-      generarHoras(a.hora_entrada as string, a.hora_salida as string)
-    );
     const ahora = new Date();
     setHorasDisponibles(
-      todasHoras
+      [...new Set(
+        agendaFecha.flatMap((a: Record<string, unknown>) =>
+          generarHoras(a.hora_entrada as string, a.hora_salida as string, (a.duracion as number) ?? 30)
+        )
+      )]
+        .sort()
         .filter(h => !ocupadas.includes(h))
         .filter(h => {
           const turnoDateTime = new Date(`${fecha}T${h}:00-03:00`);

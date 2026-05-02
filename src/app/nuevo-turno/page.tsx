@@ -18,13 +18,13 @@ export default function NuevoTurnoPage() {
   );
 }
 
-function generarHoras(entrada: string, salida: string): string[] {
+function generarHoras(entrada: string, salida: string, duracion: number): string[] {
   const horas: string[] = [];
   const start = new Date(`1970-01-01T${entrada}:00`);
   const end = new Date(`1970-01-01T${salida}:00`);
   while (start < end) {
     horas.push(`${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`);
-    start.setMinutes(start.getMinutes() + 30);
+    start.setMinutes(start.getMinutes() + duracion);
   }
   return horas;
 }
@@ -91,8 +91,12 @@ function NuevoTurno() {
     const ahoraAR = new Date().toLocaleTimeString("en-GB", { timeZone: "America/Argentina/Buenos_Aires", hour: "2-digit", minute: "2-digit" });
 
     const ahora = new Date();
-    const disponibles = agendaFecha
-      .flatMap((a: Record<string, string>) => generarHoras(a.hora_entrada, a.hora_salida))
+    const disponibles = [...new Set<string>(
+      agendaFecha.flatMap((a: Record<string, string | number>) =>
+        generarHoras(a.hora_entrada as string, a.hora_salida as string, (a.duracion as number) ?? 30)
+      )
+    )]
+      .sort()
       .filter((h: string) => !ocupadas.includes(h))
       .filter((h: string) => {
         const turnoDateTime = new Date(`${fecha}T${h}:00-03:00`);

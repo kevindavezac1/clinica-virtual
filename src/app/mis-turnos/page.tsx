@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import Link from "next/link";
 import { toast } from "@/lib/toast";
 
@@ -46,6 +47,7 @@ function MisTurnos() {
   const [tab, setTab] = useState<"proximos" | "historial">("proximos");
   const [loading, setLoading] = useState(true);
   const [cancelando, setCancelando] = useState<number | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState<number | null>(null);
 
   const cargarTurnos = () => {
     if (!user) return;
@@ -104,10 +106,9 @@ function MisTurnos() {
     return (turnoMs2 - Date.now()) >= 24 * 3_600_000;
   };
 
-  const cancelarTurno = async (id: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!confirm("¿Confirmás que querés cancelar este turno?")) return;
+  const cancelarTurno = async (id: number) => {
     setCancelando(id);
+    setConfirmCancel(null);
     const res = await fetch(`/api/turnos/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: token! },
@@ -173,7 +174,7 @@ function MisTurnos() {
                     {tab === "proximos" && turno.estado !== "Cancelado" && (
                       puedeCancel(turno) ? (
                         <button
-                          onClick={e => cancelarTurno(turno.id_turno, e)}
+                          onClick={e => { e.stopPropagation(); setConfirmCancel(turno.id_turno); }}
                           disabled={cancelando === turno.id_turno}
                           className="text-sm text-red-600 hover:underline disabled:opacity-50"
                         >
@@ -201,6 +202,16 @@ function MisTurnos() {
       )}
 
       <Link href="/" className="btn-secondary mt-6 inline-block">← Volver al inicio</Link>
+
+      {confirmCancel !== null && (
+        <ConfirmDialog
+          message="¿Confirmás que querés cancelar este turno?"
+          confirmLabel="Sí, cancelar"
+          cancelLabel="No, volver"
+          onConfirm={() => cancelarTurno(confirmCancel)}
+          onCancel={() => setConfirmCancel(null)}
+        />
+      )}
     </div>
   );
 }

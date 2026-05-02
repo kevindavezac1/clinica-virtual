@@ -3,6 +3,7 @@ import { toast } from "@/lib/toast";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import Link from "next/link";
 
 // Horarios de la clínica — límites duros
@@ -26,7 +27,9 @@ const DIAS = [
   { key: 6, label: "Sáb" },
 ];
 
-interface AgendaEntry { id: number; fecha: string; hora_entrada: string; hora_salida: string; }
+const DURACIONES = [15, 20, 30, 45, 60];
+
+interface AgendaEntry { id: number; fecha: string; hora_entrada: string; hora_salida: string; duracion: number; }
 
 export default function GestionAgendaPage() {
   return (
@@ -41,12 +44,15 @@ function GestionAgenda() {
   const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
 
   const [idEspecialidad, setIdEspecialidad] = useState<number>(1);
+  const [duracion, setDuracion] = useState<number>(30);
   const [modo, setModo] = useState<"rango" | "dia">("rango");
 
   // Vista mensual
   const [mesVista, setMesVista] = useState(hoy.slice(0, 7));
   const [agendaMes, setAgendaMes] = useState<AgendaEntry[]>([]);
+  const [todasAgendas, setTodasAgendas] = useState<AgendaEntry[]>([]);
   const [loadingMes, setLoadingMes] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
 
   // Formulario carga semanal
   const [diasSel, setDiasSel] = useState<number[]>([1, 2, 3, 4, 5]);
@@ -75,14 +81,17 @@ function GestionAgenda() {
     if (!user) return;
     setLoadingMes(true);
     const res = await fetch(`/api/agenda/medico/${user.id}`, { headers: { Authorization: token! } }).then(r => r.json());
-    const del = ((res.payload || []) as AgendaEntry[])
-      .filter(a => a.fecha.slice(0, 7) === mesVista)
-      .sort((a, b) => a.fecha.localeCompare(b.fecha));
-    setAgendaMes(del);
+    const todas = (res.payload || []) as AgendaEntry[];
+    setTodasAgendas(todas);
+    setAgendaMes(todas.filter(a => a.fecha.slice(0, 7) === mesVista).sort((a, b) => a.fecha.localeCompare(b.fecha)));
     setLoadingMes(false);
   };
 
-  useEffect(() => { cargarMes(); }, [user, mesVista]);
+  useEffect(() => { if (user) cargarMes(); }, [user]);
+
+  useEffect(() => {
+    setAgendaMes(todasAgendas.filter(a => a.fecha.slice(0, 7) === mesVista).sort((a, b) => a.fecha.localeCompare(b.fecha)));
+  }, [mesVista, todasAgendas]);
 
   // Preview de fechas a generar
   useEffect(() => {
@@ -121,11 +130,13 @@ function GestionAgenda() {
     const tieneSab = diasSel.includes(6);
     const tieneSemana = diasSel.some(d => d >= 1 && d <= 5);
 
-    if (tieneSab) {
+    if (tieneSab && !tieneSemana) {
+      // Solo sábados: validar con límite 13:00
       const err = validar(rEntrada, rSalida, true);
-      if (err) { toast(`Sábados: ${err}`, "warning"); return; }
+      if (err) { toast(err, "warning"); return; }
     }
     if (tieneSemana) {
+      // Semana (con o sin sábado): validar con límite 20:00. El sábado se autocapea a 13:00
       const err = validar(rEntrada, rSalida, false);
       if (err) { toast(err, "warning"); return; }
     }
@@ -137,6 +148,7 @@ function GestionAgenda() {
       fecha,
       hora_entrada: rEntrada,
       hora_salida: esSabado(fecha) ? (rSalida > CLINICA.sabado.cierre ? CLINICA.sabado.cierre : rSalida) : rSalida,
+      duracion,
     }));
 
     const res = await fetch("/api/agenda/bulk", {
@@ -156,6 +168,9 @@ function GestionAgenda() {
     } else toast(res.error || "Error al guardar", "error");
   };
 
+  const fechaYaTieneAgenda = (fecha: string) =>
+    todasAgendas.some(a => a.fecha.slice(0, 10) === fecha);
+
   // Guardar día específico
   const guardarDia = async () => {
     if (!dEntrada || !dSalida) { toast("Completá los horarios", "warning"); return; }
@@ -163,29 +178,29 @@ function GestionAgenda() {
     if (dow === 0) { toast("La clínica no abre los domingos", "warning"); return; }
     const err = validar(dEntrada, dSalida, dow === 6);
     if (err) { toast(err, "warning"); return; }
+    if (fechaYaTieneAgenda(dFecha)) { toast("Ya tenés agenda cargada para ese día. Eliminala primero si querés modificarla.", "warning"); return; }
 
     const res = await fetch("/api/agenda", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: token! },
-      body: JSON.stringify({ id_medico: user!.id, id_especialidad: idEspecialidad, fecha: dFecha, hora_entrada: dEntrada, hora_salida: dSalida }),
+      body: JSON.stringify({ id_medico: user!.id, id_especialidad: idEspecialidad, fecha: dFecha, hora_entrada: dEntrada, hora_salida: dSalida, duracion }),
     }).then(r => r.json());
 
     if (res.codigo === 200) {
       toast("Día agregado");
       setDEntrada(""); setDSalida("");
-      if (dFecha.slice(0, 7) === mesVista) cargarMes();
+      cargarMes();
     } else toast(res.error || "Error al guardar", "error");
   };
 
-  // Eliminar entrada de agenda
   const eliminar = async (id: number) => {
-    if (!confirm("¿Eliminar este horario?")) return;
     const res = await fetch(`/api/agenda/${id}`, {
       method: "DELETE",
       headers: { Authorization: token! },
     }).then(r => r.json());
     if (res.codigo === 200) { toast("Horario eliminado"); cargarMes(); }
     else toast(res.error || "No se puede eliminar", "error");
+    setConfirmDelete(null);
   };
 
   const navMes = (delta: number) => {
@@ -227,6 +242,23 @@ function GestionAgenda() {
           ))}
         </div>
 
+        <div className="mb-4">
+          <label className="label-field">Duración del turno</label>
+          <div className="flex gap-2 flex-wrap">
+            {DURACIONES.map(d => (
+              <button key={d} type="button"
+                onClick={() => setDuracion(d)}
+                className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors border-2 ${
+                  duracion === d
+                    ? "bg-blue-600 border-blue-600 text-white"
+                    : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
+                }`}>
+                {d} min
+              </button>
+            ))}
+          </div>
+        </div>
+
         {modo === "rango" && (
           <div className="space-y-4">
             <div>
@@ -258,17 +290,17 @@ function GestionAgenda() {
                 <label className="label-field">Hora entrada</label>
                 <select className="select-field" value={rEntrada} onChange={e => { setREntrada(e.target.value); setRSalida(""); }}>
                   <option value="">Seleccioná</option>
-                  {HORAS.filter(h => h < "20:00").map(h => <option key={h} value={h}>{h}</option>)}
+                  {HORAS.filter(h => h < cierreMaximo()).map(h => <option key={h} value={h}>{h}</option>)}
                 </select>
               </div>
               <div>
                 <label className="label-field">
                   Hora salida
-                  {soloSabSelec && <span className="text-orange-500 text-xs ml-1">(máx 13:00)</span>}
+                  {soloSabSelec && <span className="text-orange-500 text-xs ml-1">(máx 12:30)</span>}
                 </label>
                 <select className="select-field" value={rSalida} onChange={e => setRSalida(e.target.value)} disabled={!rEntrada}>
                   <option value="">Seleccioná</option>
-                  {HORAS.filter(h => h > rEntrada && h <= cierreMaximo()).map(h => <option key={h} value={h}>{h}</option>)}
+                  {HORAS.filter(h => h > rEntrada && (soloSabSelec ? h < cierreMaximo() : h <= cierreMaximo())).map(h => <option key={h} value={h}>{h}</option>)}
                 </select>
               </div>
             </div>
@@ -302,27 +334,32 @@ function GestionAgenda() {
             <div>
               <label className="label-field">Fecha</label>
               <input type="date" className="input-field max-w-xs" value={dFecha} min={hoy} onChange={e => { setDFecha(e.target.value); setDEntrada(""); setDSalida(""); }} />
+              {fechaYaTieneAgenda(dFecha) && (
+                <p className="text-amber-700 bg-amber-50 text-xs rounded-lg px-3 py-2 mt-2">
+                  Ya tenés agenda cargada para este día. Eliminala primero si querés modificarla.
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="label-field">Hora entrada</label>
-                <select className="select-field" value={dEntrada} onChange={e => { setDEntrada(e.target.value); setDSalida(""); }}>
+                <select className="select-field" value={dEntrada} onChange={e => { setDEntrada(e.target.value); setDSalida(""); }} disabled={fechaYaTieneAgenda(dFecha)}>
                   <option value="">Seleccioná</option>
-                  {HORAS.filter(h => h < "20:00").map(h => <option key={h} value={h}>{h}</option>)}
+                  {HORAS.filter(h => h < (esSabado(dFecha) ? CLINICA.sabado.cierre : CLINICA.semana.cierre)).map(h => <option key={h} value={h}>{h}</option>)}
                 </select>
               </div>
               <div>
                 <label className="label-field">
                   Hora salida
-                  {esSabado(dFecha) && <span className="text-orange-500 text-xs ml-1">(máx 13:00)</span>}
+                  {esSabado(dFecha) && <span className="text-orange-500 text-xs ml-1">(máx 12:30)</span>}
                 </label>
-                <select className="select-field" value={dSalida} onChange={e => setDSalida(e.target.value)} disabled={!dEntrada}>
+                <select className="select-field" value={dSalida} onChange={e => setDSalida(e.target.value)} disabled={!dEntrada || fechaYaTieneAgenda(dFecha)}>
                   <option value="">Seleccioná</option>
-                  {HORAS.filter(h => h > dEntrada && h <= (esSabado(dFecha) ? CLINICA.sabado.cierre : CLINICA.semana.cierre)).map(h => <option key={h} value={h}>{h}</option>)}
+                  {HORAS.filter(h => h > dEntrada && (esSabado(dFecha) ? h < CLINICA.sabado.cierre : h <= CLINICA.semana.cierre)).map(h => <option key={h} value={h}>{h}</option>)}
                 </select>
               </div>
             </div>
-            <button onClick={guardarDia} className="btn-primary">Guardar día</button>
+            <button onClick={guardarDia} className="btn-primary" disabled={fechaYaTieneAgenda(dFecha)}>Guardar día</button>
           </div>
         )}
       </div>
@@ -347,8 +384,9 @@ function GestionAgenda() {
                   <div className={`w-2 h-2 rounded-full ${esSabado(a.fecha) ? "bg-orange-400" : "bg-blue-400"}`} />
                   <span className="text-sm text-gray-800 capitalize">{formatFecha(a.fecha)}</span>
                   <span className="text-sm text-gray-500 font-mono">{a.hora_entrada} – {a.hora_salida}</span>
+                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{a.duracion} min</span>
                 </div>
-                <button onClick={() => eliminar(a.id)} className="text-xs text-red-500 hover:text-red-700 hover:underline px-2">
+                <button onClick={() => setConfirmDelete(a.id)} className="text-xs text-red-500 hover:text-red-700 hover:underline px-2">
                   Eliminar
                 </button>
               </li>
@@ -358,6 +396,15 @@ function GestionAgenda() {
       </div>
 
       <Link href="/" className="btn-secondary mt-6 inline-block">← Volver al inicio</Link>
+
+      {confirmDelete !== null && (
+        <ConfirmDialog
+          message="¿Eliminar este horario de la agenda?"
+          confirmLabel="Eliminar"
+          onConfirm={() => eliminar(confirmDelete)}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
     </div>
   );
 }

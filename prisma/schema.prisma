@@ -73,6 +73,7 @@ model Agenda {
   fecha           DateTime     @db.Date
   hora_entrada    String       @db.VarChar(10)
   hora_salida     String       @db.VarChar(10)
+  duracion        Int          @default(30)
   medico          Usuario      @relation(fields: [id_medico], references: [id])
   especialidad    Especialidad @relation(fields: [id_especialidad], references: [id])
   turnos          Turno[]

@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 const rolColor: Record<string, string> = {
   Paciente: "badge-teal",
@@ -12,6 +14,7 @@ const rolColor: Record<string, string> = {
 
 export default function Header() {
   const { isLoggedIn, user, logout } = useAuth();
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
@@ -42,7 +45,7 @@ export default function Header() {
                 {user?.nombre?.charAt(0).toUpperCase()}
               </div>
               <button
-                onClick={logout}
+                onClick={() => setConfirmLogout(true)}
                 className="btn-ghost text-red-500 hover:bg-red-50 hover:text-red-600"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -63,6 +66,17 @@ export default function Header() {
           )}
         </nav>
       </div>
+
+      {confirmLogout && (
+        <ConfirmDialog
+          message="¿Querés cerrar sesión?"
+          confirmLabel="Salir"
+          cancelLabel="Cancelar"
+          variant="warning"
+          onConfirm={() => { setConfirmLogout(false); logout(); }}
+          onCancel={() => setConfirmLogout(false)}
+        />
+      )}
     </header>
   );
 }
