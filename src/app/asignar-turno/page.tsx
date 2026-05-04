@@ -39,6 +39,7 @@ function AsignarTurno() {
   const [agenda, setAgenda] = useState<Record<string, unknown>[]>([]);
   const [idAgenda, setIdAgenda] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const [feriados, setFeriados] = useState<Set<string>>(new Set());
   const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
   const [calMes, setCalMes] = useState(hoy.slice(0, 7));
@@ -175,12 +176,15 @@ function AsignarTurno() {
     setError("");
     if (!pacienteSeleccionado) { setError("Seleccioná un paciente."); return; }
     if (!idAgenda) { setError("Seleccioná una fecha y hora válidas."); return; }
+    if (loading) return;
+    setLoading(true);
     const turnoData = {
       nota: form.notas, id_agenda: idAgenda, fecha: form.fecha, hora: form.hora,
       id_paciente: Number(form.paciente), id_cobertura: Number(form.cobertura),
     };
     const res = await fetch("/api/turnos", { method: "POST", headers: { "Content-Type": "application/json", Authorization: token! }, body: JSON.stringify(turnoData) });
     const data = await res.json();
+    setLoading(false);
     if (data.codigo === 200) { toast("Turno asignado correctamente"); router.push("/"); }
     else setError(data.mensaje || data.error || "Error al asignar el turno");
   };
@@ -335,7 +339,7 @@ function AsignarTurno() {
         </div>
         {error && <p className="error-msg">{error}</p>}
         <div className="flex gap-3">
-          <button type="submit" className="btn-primary flex-1">Asignar turno</button>
+          <button type="submit" className="btn-primary flex-1" disabled={loading}>{loading ? "Asignando..." : "Asignar turno"}</button>
           <button type="button" onClick={() => router.push("/")} className="btn-secondary flex-1">Cancelar</button>
         </div>
       </form>

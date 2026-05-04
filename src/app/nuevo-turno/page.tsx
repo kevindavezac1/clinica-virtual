@@ -38,6 +38,7 @@ function NuevoTurno() {
   const [horasDisponibles, setHorasDisponibles] = useState<string[]>([]);
   const [idAgenda, setIdAgenda] = useState<number | null>(null);
   const [aviso, setAviso] = useState("");
+  const [loading, setLoading] = useState(false);
   const [feriados, setFeriados] = useState<Set<string>>(new Set());
   const [agenda, setAgenda] = useState<Record<string, unknown>[]>([]);
   const [fechasDisponibles, setFechasDisponibles] = useState<string[]>([]);
@@ -126,10 +127,12 @@ function NuevoTurno() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!idAgenda || !cobertura) return;
+    if (!idAgenda || !cobertura || loading) return;
+    setLoading(true);
     const turnoData = { nota: form.notas, id_agenda: idAgenda, fecha: form.fecha, hora: form.hora, id_paciente: user!.id, id_cobertura: cobertura.id };
     const res = await fetch("/api/turnos", { method: "POST", headers: { "Content-Type": "application/json", Authorization: token! }, body: JSON.stringify(turnoData) });
     const data = await res.json();
+    setLoading(false);
     if (data.codigo === 200) {
       toast(`Turno confirmado el ${form.fecha} a las ${form.hora}`);
       router.push("/");
@@ -238,7 +241,7 @@ function NuevoTurno() {
           <input className="input-field" value={form.notas} onChange={e => setForm(f => ({ ...f, notas: e.target.value }))} placeholder="Motivo de consulta u observaciones" />
         </div>
         <div className="flex gap-3">
-          <button type="submit" className="btn-primary flex-1">Confirmar turno</button>
+          <button type="submit" className="btn-primary flex-1" disabled={loading}>{loading ? "Confirmando..." : "Confirmar turno"}</button>
           <button type="button" onClick={() => router.push("/")} className="btn-secondary flex-1">Cancelar</button>
         </div>
       </form>

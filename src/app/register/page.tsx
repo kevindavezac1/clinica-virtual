@@ -26,7 +26,10 @@ export default function RegisterPage() {
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+    let value = e.target.value;
+    if (e.target.name === "dni") value = value.replace(/\D/g, "").slice(0, 8);
+    if (e.target.name === "telefono") value = value.replace(/\D/g, "");
+    setForm(f => ({ ...f, [e.target.name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,6 +41,7 @@ export default function RegisterPage() {
       setError("Las contraseñas no coinciden");
       return;
     }
+    if (form.dni.length < 7) { setError("El DNI debe tener entre 7 y 8 dígitos"); return; }
     setLoading(true);
     const res = await fetch("/api/usuarios", {
       method: "POST",
@@ -62,7 +66,7 @@ export default function RegisterPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label-field">DNI</label>
-              <input name="dni" className="input-field" value={form.dni} onChange={handleChange} required />
+              <input name="dni" className="input-field" value={form.dni} onChange={handleChange} inputMode="numeric" maxLength={8} required />
             </div>
             <div>
               <label className="label-field">Nombre</label>
@@ -91,7 +95,7 @@ export default function RegisterPage() {
             </div>
             <div>
               <label className="label-field">Teléfono</label>
-              <input name="telefono" className="input-field" value={form.telefono} onChange={handleChange} required />
+              <input name="telefono" className="input-field" value={form.telefono} onChange={handleChange} inputMode="numeric" required />
             </div>
           </div>
           <div>

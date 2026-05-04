@@ -33,7 +33,10 @@ function CrearPaciente() {
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+    let value = e.target.value;
+    if (e.target.name === "dni") value = value.replace(/\D/g, "").slice(0, 8);
+    if (e.target.name === "telefono") value = value.replace(/\D/g, "");
+    setForm(f => ({ ...f, [e.target.name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,6 +45,7 @@ function CrearPaciente() {
     const pwCheck = validatePassword(form.password);
     if (!pwCheck.valid) { setError(pwCheck.error!); return; }
     if (form.password !== repeatPassword) { setError("Las contraseñas no coinciden"); return; }
+    if (form.dni.length < 7) { setError("El DNI debe tener entre 7 y 8 dígitos"); return; }
     setLoading(true);
     const res = await fetch("/api/usuarios", {
       method: "POST",
@@ -60,16 +64,17 @@ function CrearPaciente() {
       <form onSubmit={handleSubmit} className="card space-y-4">
         <div className="grid grid-cols-2 gap-4">
           {[
-            { label: "DNI", name: "dni" }, { label: "Nombre", name: "nombre" },
+            { label: "DNI", name: "dni", inputMode: "numeric" as const, maxLength: 8 },
+            { label: "Nombre", name: "nombre" },
             { label: "Apellido", name: "apellido" },
             { label: "Fecha de nacimiento", name: "fecha_nacimiento", type: "date" },
             { label: "Contraseña", name: "password", type: "password" },
             { label: "Email", name: "email", type: "email" },
-            { label: "Teléfono", name: "telefono" },
-          ].map(({ label, name, type = "text" }) => (
+            { label: "Teléfono", name: "telefono", inputMode: "numeric" as const },
+          ].map(({ label, name, type = "text", inputMode, maxLength }) => (
             <div key={name}>
               <label className="label-field">{label}</label>
-              <input type={type} name={name} className="input-field" value={(form as Record<string, string>)[name]} onChange={handleChange} max={type === "date" ? new Date().toISOString().split("T")[0] : undefined} required />
+              <input type={type} name={name} className="input-field" value={(form as Record<string, string>)[name]} onChange={handleChange} max={type === "date" ? new Date().toISOString().split("T")[0] : undefined} inputMode={inputMode} maxLength={maxLength} required />
             </div>
           ))}
           <div>
