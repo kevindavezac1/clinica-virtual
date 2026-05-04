@@ -1,6 +1,7 @@
 "use client";
 import { toast } from "@/lib/toast";
 import { validatePassword } from "@/lib/validatePassword";
+import FechaNacimientoInput from "@/components/FechaNacimientoInput";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -67,16 +68,19 @@ function CrearPaciente() {
             { label: "DNI", name: "dni", inputMode: "numeric" as const, maxLength: 8 },
             { label: "Nombre", name: "nombre" },
             { label: "Apellido", name: "apellido" },
-            { label: "Fecha de nacimiento", name: "fecha_nacimiento", type: "date" },
             { label: "Contraseña", name: "password", type: "password" },
             { label: "Email", name: "email", type: "email" },
             { label: "Teléfono", name: "telefono", inputMode: "numeric" as const },
           ].map(({ label, name, type = "text", inputMode, maxLength }) => (
             <div key={name}>
               <label className="label-field">{label}</label>
-              <input type={type} name={name} className="input-field" value={(form as Record<string, string>)[name]} onChange={handleChange} max={type === "date" ? new Date().toISOString().split("T")[0] : undefined} inputMode={inputMode} maxLength={maxLength} required />
+              <input type={type} name={name} className="input-field" value={(form as Record<string, string>)[name]} onChange={handleChange} inputMode={inputMode} maxLength={maxLength} required />
             </div>
           ))}
+          <div>
+            <label className="label-field">Fecha de nacimiento</label>
+            <FechaNacimientoInput value={form.fecha_nacimiento} onChange={v => setForm(f => ({ ...f, fecha_nacimiento: v }))} required />
+          </div>
           <div>
             <label className="label-field">Repetir contraseña</label>
             <input type="password" className="input-field" value={repeatPassword} onChange={e => setRepeatPassword(e.target.value)} required />

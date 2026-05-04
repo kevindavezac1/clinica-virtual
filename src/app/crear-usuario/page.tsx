@@ -1,6 +1,7 @@
 "use client";
 import { toast } from "@/lib/toast";
 import { validatePassword } from "@/lib/validatePassword";
+import FechaNacimientoInput from "@/components/FechaNacimientoInput";
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -79,7 +80,6 @@ function CrearUsuario() {
             { label: "DNI", name: "dni", inputMode: "numeric" as const, maxLength: 8 },
             { label: "Apellido", name: "apellido" },
             { label: "Nombre", name: "nombre" },
-            { label: "Fecha de nacimiento", name: "fecha_nacimiento", type: "date" },
             { label: "Contraseña", name: "password", type: "password" },
             { label: "Email", name: "email", type: "email" },
             { label: "Teléfono", name: "telefono", inputMode: "numeric" as const },
@@ -92,13 +92,16 @@ function CrearUsuario() {
                 className="input-field"
                 value={(form as Record<string, string>)[name]}
                 onChange={handleChange}
-                max={type === "date" ? new Date().toISOString().split("T")[0] : undefined}
                 inputMode={inputMode}
                 maxLength={maxLength}
                 required
               />
             </div>
           ))}
+          <div>
+            <label className="label-field">Fecha de nacimiento</label>
+            <FechaNacimientoInput value={form.fecha_nacimiento} onChange={v => setForm(f => ({ ...f, fecha_nacimiento: v }))} required />
+          </div>
         </div>
         <div>
           <label className="label-field">Rol</label>

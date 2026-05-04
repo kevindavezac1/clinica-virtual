@@ -1,6 +1,7 @@
 "use client";
 import { toast } from "@/lib/toast";
 import { validatePassword } from "@/lib/validatePassword";
+import FechaNacimientoInput from "@/components/FechaNacimientoInput";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -78,7 +79,7 @@ export default function RegisterPage() {
             </div>
             <div>
               <label className="label-field">Fecha de nacimiento</label>
-              <input type="date" name="fecha_nacimiento" className="input-field" value={form.fecha_nacimiento} onChange={handleChange} max={new Date().toISOString().split("T")[0]} required />
+              <FechaNacimientoInput value={form.fecha_nacimiento} onChange={v => setForm(f => ({ ...f, fecha_nacimiento: v }))} required />
             </div>
             <div>
               <label className="label-field">Contraseña</label>
