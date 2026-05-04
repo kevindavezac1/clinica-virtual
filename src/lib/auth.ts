@@ -2,9 +2,11 @@ import { SignJWT, jwtVerify } from "jose";
 import { NextRequest } from "next/server";
 import { randomBytes } from "crypto";
 
-const secret = new TextEncoder().encode(
-  process.env.JWT_SECRET || "fallback_secret"
-);
+if (!process.env.JWT_SECRET) {
+  throw new Error("JWT_SECRET environment variable is not set");
+}
+
+const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
 export class AuthError extends Error {
   readonly status = 401;

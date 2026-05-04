@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { validateRequest } from "@/lib/auth";
+import { validateRequest, AuthError } from "@/lib/auth";
 import { validatePassword } from "@/lib/validatePassword";
 import { sanitizeString } from "@/lib/sanitize";
 import bcrypt from "bcryptjs";
@@ -24,14 +24,24 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       payload: [{ ...rest, nombre_cobertura: cobertura?.nombre ?? null }],
     });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: (error as { status?: number }).status ?? 500 });
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await validateRequest(req);
+    const jwtPayload = await validateRequest(req);
     const { id } = await params;
+    const isAdmin = jwtPayload.rol === "Admin";
+    const isSelf = String(jwtPayload.id) === id;
+
+    if (!isAdmin && !isSelf) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    }
+
     const body = await req.json();
     const { dni, apellido, nombre, fecha_nacimiento, password, rol, email, telefono, id_cobertura } = body;
 
@@ -40,11 +50,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       apellido: sanitizeString(apellido),
       nombre: sanitizeString(nombre),
       fecha_nacimiento: new Date(fecha_nacimiento),
-      rol,
       email: sanitizeString(email),
       telefono: sanitizeString(telefono),
       id_cobertura: id_cobertura ? Number(id_cobertura) : null,
     };
+
+    // Only admin can change rol
+    if (isAdmin && rol) {
+      updateData.rol = rol;
+    }
 
     if (password && typeof password === "string" && password.trim() !== "") {
       const pwCheck = validatePassword(password);
@@ -58,6 +72,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     return NextResponse.json({ codigo: 200, mensaje: "Usuario modificado", payload: [] });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: (error as { status?: number }).status ?? 500 });
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }

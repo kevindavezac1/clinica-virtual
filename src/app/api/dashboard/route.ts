@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { validateRequest } from "@/lib/auth";
+import { validateRequest, AuthError } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
@@ -98,6 +98,9 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: (error as { status?: number }).status ?? 500 });
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { validateRequest } from "@/lib/auth";
+import { validateRequest, AuthError } from "@/lib/auth";
 import { getFeriadosForYears } from "@/lib/feriados";
+import { Prisma } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
   try {
@@ -10,7 +11,10 @@ export async function GET(req: NextRequest) {
     const payload = await getFeriadosForYears([currentYear, currentYear + 1]);
     return NextResponse.json({ codigo: 200, payload });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: (error as { status?: number }).status ?? 500 });
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }
 
@@ -32,10 +36,12 @@ export async function POST(req: NextRequest) {
       payload: { id: feriado.id, fecha: feriado.fecha.toISOString().split("T")[0], descripcion: feriado.descripcion },
     });
   } catch (error) {
-    const msg = (error as Error).message;
-    if (msg.includes("Unique constraint")) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return NextResponse.json({ error: "Ya existe un feriado para esa fecha" }, { status: 409 });
     }
-    return NextResponse.json({ error: msg }, { status: (error as { status?: number }).status ?? 500 });
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }

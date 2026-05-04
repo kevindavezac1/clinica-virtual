@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { validateRequest } from "@/lib/auth";
+import { validateRequest, AuthError } from "@/lib/auth";
 import { sendTurnoPendiente } from "@/lib/email";
 import { isFeriado } from "@/lib/feriados";
+import { sanitizeNote } from "@/lib/sanitize";
 
 function formatFecha(fecha: Date): string {
   return fecha.toLocaleDateString("es-AR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
@@ -46,14 +47,19 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ codigo: 200, mensaje: "OK", payload });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: (error as { status?: number }).status ?? 500 });
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     await validateRequest(req);
-    const { nota, id_agenda, fecha, hora, id_paciente, id_cobertura } = await req.json();
+    const body = await req.json();
+    const nota = sanitizeNote(body.nota);
+    const { id_agenda, fecha, hora, id_paciente, id_cobertura } = body;
 
     const feriadoCheck = await isFeriado(fecha);
     if (feriadoCheck.es) {
@@ -120,6 +126,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ codigo: 200, message: "Turno asignado correctamente", payload: [] });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: (error as { status?: number }).status ?? 500 });
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }

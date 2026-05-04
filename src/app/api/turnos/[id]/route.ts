@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { validateRequest } from "@/lib/auth";
+import { validateRequest, AuthError } from "@/lib/auth";
 import { sendTurnoConfirmado, sendTurnoCancelado, sendTurnoCanceladoPorPaciente } from "@/lib/email";
 
 function formatFecha(fecha: Date): string {
@@ -83,7 +83,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     return NextResponse.json({ codigo: 200, mensaje: "Estado actualizado", payload: [] });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: (error as { status?: number }).status ?? 500 });
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }
 
@@ -98,7 +101,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     });
     return NextResponse.json({ codigo: 200, mensaje: "Turno modificado", payload: [] });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: (error as { status?: number }).status ?? 500 });
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }
 
@@ -109,6 +115,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     await prisma.turno.delete({ where: { id: Number(id) } });
     return NextResponse.json({ codigo: 200, mensaje: "Turno eliminado", payload: [] });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: (error as { status?: number }).status ?? 500 });
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }

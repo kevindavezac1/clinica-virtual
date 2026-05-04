@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { validateRequest } from "@/lib/auth";
+import { validateRequest, AuthError } from "@/lib/auth";
 import { validatePassword } from "@/lib/validatePassword";
-import { sanitizeString } from "@/lib/sanitize";
+import { sanitizeString, sanitizeEmail } from "@/lib/sanitize";
 import bcrypt from "bcryptjs";
+
+const ROLES_VALIDOS = ["Paciente", "Medico", "Operador", "Admin"];
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,19 +19,42 @@ export async function GET(req: NextRequest) {
     }));
     return NextResponse.json({ codigo: 200, mensaje: "OK", payload });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: (error as { status?: number }).status ?? 500 });
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
+    // Try to get auth — optional (public registration allowed for Paciente only)
+    let callerRol: string | null = null;
+    try {
+      const jwtPayload = await validateRequest(req);
+      callerRol = jwtPayload.rol as string;
+    } catch {
+      // Unauthenticated — only Paciente allowed below
+    }
+
     const body = await req.json();
-    const dni = sanitizeString(body.dni);
-    const apellido = sanitizeString(body.apellido);
-    const nombre = sanitizeString(body.nombre);
-    const email = sanitizeString(body.email);
-    const telefono = sanitizeString(body.telefono);
-    const { fecha_nacimiento, password, rol, id_cobertura, id_especialidad } = body;
+    const dni = sanitizeString(body.dni, 20);
+    const apellido = sanitizeString(body.apellido, 100);
+    const nombre = sanitizeString(body.nombre, 100);
+    const email = sanitizeEmail(body.email);
+    const telefono = sanitizeString(body.telefono, 20);
+    const { fecha_nacimiento, password, id_cobertura, id_especialidad } = body;
+
+    // Unauthenticated → force Paciente; authenticated admin → any role
+    const rol: string = callerRol === "Admin" ? (body.rol ?? "Paciente") : "Paciente";
+
+    if (!dni || !apellido || !nombre || !email) {
+      return NextResponse.json({ error: "Faltan campos requeridos o email inválido" }, { status: 400 });
+    }
+
+    if (!ROLES_VALIDOS.includes(rol)) {
+      return NextResponse.json({ error: "Rol inválido" }, { status: 400 });
+    }
 
     const pwCheck = validatePassword(password ?? "");
     if (!pwCheck.valid) {
@@ -63,6 +88,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ codigo: 200, mensaje: "Usuario añadido", payload: [{ id_usuario: usuario.id }] });
   } catch (error) {
-    return NextResponse.json({ error: (error as Error).message }, { status: (error as { status?: number }).status ?? 500 });
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }
