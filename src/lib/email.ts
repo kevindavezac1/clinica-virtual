@@ -114,3 +114,29 @@ export async function sendTurnoCancelado(to: string, paciente: string, fecha: st
     `),
   });
 }
+
+export async function sendTurnoCanceladoPorMedico(
+  to: string,
+  paciente: string,
+  fecha: string,
+  hora: string,
+  medico: string,
+  especialidad: string,
+) {
+  await transporter.sendMail({
+    from: FROM,
+    to,
+    subject: "Tu turno fue cancelado por el médico — Consultorios Esperanza",
+    html: wrap(`
+      <h2 style="color:#dc2626;margin-top:0">✗ Tu turno fue cancelado</h2>
+      <p>Hola <strong>${paciente}</strong>, lamentamos informarte que tu turno fue cancelado porque el médico no estará disponible ese día.</p>
+      <table style="border-collapse:collapse;width:100%;margin:16px 0">
+        <tr><td style="padding:8px 0;color:#666;width:120px">Médico</td><td style="padding:8px 0;font-weight:600">${medico}</td></tr>
+        <tr><td style="padding:8px 0;color:#666">Especialidad</td><td style="padding:8px 0;font-weight:600">${especialidad}</td></tr>
+        <tr><td style="padding:8px 0;color:#666">Fecha</td><td style="padding:8px 0;font-weight:600">${fecha}</td></tr>
+        <tr><td style="padding:8px 0;color:#666">Hora</td><td style="padding:8px 0;font-weight:600">${hora}</td></tr>
+      </table>
+      <p>Disculpá los inconvenientes. Podés solicitar un nuevo turno desde <a href="${BASE_URL}/nuevo-turno" style="color:#1e3a5f">Nuevo turno</a>.</p>
+    `),
+  });
+}

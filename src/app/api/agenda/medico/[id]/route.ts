@@ -6,10 +6,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     await validateRequest(req);
     const { id } = await params;
-    const rows = await prisma.agenda.findMany({ where: { id_medico: Number(id) } });
+    const rows = await prisma.agenda.findMany({
+      where: { id_medico: Number(id) },
+      include: { _count: { select: { turnos: { where: { estado: { not: "Cancelado" } } } } } },
+    });
+
+    const payload = rows.map(({ _count, ...a }) => ({ ...a, turnosActivos: _count.turnos }));
 
     if (rows.length > 0) {
-      return NextResponse.json({ codigo: 200, mensaje: "OK", payload: rows });
+      return NextResponse.json({ codigo: 200, mensaje: "OK", payload });
     }
     return NextResponse.json({ codigo: 200, mensaje: "Médico no posee agenda", payload: [] });
   } catch (error) {

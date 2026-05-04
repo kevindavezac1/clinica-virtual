@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     const usuarios = await prisma.usuario.findMany({
       include: { cobertura: { select: { nombre: true } } },
     });
-    const payload = usuarios.map(({ cobertura, ...u }) => ({
+    const payload = usuarios.map(({ cobertura, password: _pw, ...u }) => ({
       ...u,
       nombre_cobertura: cobertura?.nombre ?? null,
     }));

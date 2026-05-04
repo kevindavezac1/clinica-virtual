@@ -1,5 +1,5 @@
 "use client";
-
+import { toast } from "@/lib/toast";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -7,6 +7,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 interface Usuario {
   id: number; dni: string; nombre: string; apellido: string; rol: string;
   nombre_cobertura: string; telefono: string; email: string; id_cobertura: number;
+  fecha_nacimiento: string;
 }
 interface Cobertura { id: number; nombre: string; }
 
@@ -52,13 +53,18 @@ function ListarUsuarios() {
 
   const guardarEdicion = async () => {
     if (!editando) return;
-    await fetch(`/api/usuarios/${editando.id}`, {
+    const res = await fetch(`/api/usuarios/${editando.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: token! },
       body: JSON.stringify(editando),
-    });
-    setEditando(null);
-    cargar();
+    }).then(r => r.json());
+    if (res.codigo === 200) {
+      toast("Usuario actualizado correctamente");
+      setEditando(null);
+      cargar();
+    } else {
+      toast(res.error || res.mensaje || "Error al guardar", "error");
+    }
   };
 
   return (
@@ -98,7 +104,7 @@ function ListarUsuarios() {
                 <td className="table-cell">{u.apellido}</td>
                 <td className="table-cell">{u.dni}</td>
                 <td className="table-cell"><span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">{u.rol}</span></td>
-                <td className="table-cell">{u.nombre_cobertura}</td>
+                <td className="table-cell">{u.rol === "Paciente" ? u.nombre_cobertura : "—"}</td>
                 <td className="table-cell">{u.telefono}</td>
                 <td className="table-cell">{u.email}</td>
                 <td className="table-cell">
@@ -119,24 +125,35 @@ function ListarUsuarios() {
                 { label: "Nombre", key: "nombre" }, { label: "Apellido", key: "apellido" },
                 { label: "DNI", key: "dni" }, { label: "Teléfono", key: "telefono" },
                 { label: "Email", key: "email", type: "email" },
+                { label: "Fecha de nacimiento", key: "fecha_nacimiento", type: "date" },
               ].map(({ label, key, type = "text" }) => (
                 <div key={key}>
                   <label className="label-field">{label}</label>
-                  <input type={type} className="input-field" value={(editando as unknown as Record<string, string>)[key] || ""} onChange={e => setEditando(ed => ({ ...ed!, [key]: e.target.value }))} />
+                  <input
+                    type={type}
+                    className="input-field"
+                    value={
+                      key === "fecha_nacimiento"
+                        ? ((editando as unknown as Record<string, string>)[key] || "").slice(0, 10)
+                        : (editando as unknown as Record<string, string>)[key] || ""
+                    }
+                    max={type === "date" ? new Date().toISOString().split("T")[0] : undefined}
+                    onChange={e => setEditando(ed => ({ ...ed!, [key]: e.target.value }))}
+                  />
                 </div>
               ))}
               <div>
                 <label className="label-field">Rol</label>
-                <select className="select-field" value={editando.rol} onChange={e => setEditando(ed => ({ ...ed!, rol: e.target.value }))}>
-                  {["Operador","Medico","Paciente","Administrador"].map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
+                <input className="input-field bg-gray-50" value={editando.rol} readOnly />
               </div>
-              <div>
-                <label className="label-field">Cobertura</label>
-                <select className="select-field" value={editando.id_cobertura} onChange={e => setEditando(ed => ({ ...ed!, id_cobertura: Number(e.target.value) }))}>
-                  {coberturas.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                </select>
-              </div>
+              {editando.rol === "Paciente" && (
+                <div>
+                  <label className="label-field">Cobertura</label>
+                  <select className="select-field" value={editando.id_cobertura} onChange={e => setEditando(ed => ({ ...ed!, id_cobertura: Number(e.target.value) }))}>
+                    {coberturas.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                  </select>
+                </div>
+              )}
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={guardarEdicion} className="btn-primary flex-1">Guardar</button>

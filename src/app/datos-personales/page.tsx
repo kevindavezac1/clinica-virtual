@@ -75,7 +75,6 @@ function DatosPersonales() {
           { label: "Fecha de nacimiento", name: "fecha_nacimiento", type: "date", disabled: true },
           { label: "Email", name: "email", type: "email" },
           { label: "Teléfono", name: "telefono" },
-          { label: "Contraseña", name: "password", type: "password" },
         ].map(({ label, name, type = "text", disabled }) => (
           <div key={name}>
             <label className="label-field">{label}</label>
@@ -89,6 +88,19 @@ function DatosPersonales() {
             />
           </div>
         ))}
+        {editMode && (
+          <div>
+            <label className="label-field">Nueva contraseña</label>
+            <input
+              type="password"
+              name="password"
+              className="input-field"
+              value={usuario.password || ""}
+              onChange={handleChange}
+              placeholder="Dejá vacío para no cambiar"
+            />
+          </div>
+        )}
         <div>
           <label className="label-field">Cobertura</label>
           <select name="id_cobertura" className="select-field" value={usuario.id_cobertura || ""} onChange={handleChange} disabled={!editMode}>

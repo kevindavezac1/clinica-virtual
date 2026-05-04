@@ -29,7 +29,7 @@ const DIAS = [
 
 const DURACIONES = [15, 20, 30, 45, 60];
 
-interface AgendaEntry { id: number; fecha: string; hora_entrada: string; hora_salida: string; duracion: number; }
+interface AgendaEntry { id: number; fecha: string; hora_entrada: string; hora_salida: string; duracion: number; turnosActivos: number; }
 
 export default function GestionAgendaPage() {
   return (
@@ -52,7 +52,7 @@ function GestionAgenda() {
   const [agendaMes, setAgendaMes] = useState<AgendaEntry[]>([]);
   const [todasAgendas, setTodasAgendas] = useState<AgendaEntry[]>([]);
   const [loadingMes, setLoadingMes] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: number; turnosActivos: number } | null>(null);
 
   // Formulario carga semanal
   const [diasSel, setDiasSel] = useState<number[]>([1, 2, 3, 4, 5]);
@@ -193,13 +193,17 @@ function GestionAgenda() {
     } else toast(res.error || "Error al guardar", "error");
   };
 
-  const eliminar = async (id: number) => {
-    const res = await fetch(`/api/agenda/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: token! },
-    }).then(r => r.json());
-    if (res.codigo === 200) { toast("Horario eliminado"); cargarMes(); }
-    else toast(res.error || "No se puede eliminar", "error");
+  const eliminar = async (id: number, tieneActivos: boolean) => {
+    const url = tieneActivos ? `/api/agenda/${id}/cancelar` : `/api/agenda/${id}`;
+    const method = tieneActivos ? "POST" : "DELETE";
+    const res = await fetch(url, { method, headers: { Authorization: token! } }).then(r => r.json());
+    if (res.codigo === 200) {
+      const msg = tieneActivos
+        ? `Día cancelado — ${res.turnosCancelados} paciente${res.turnosCancelados !== 1 ? "s" : ""} notificado${res.turnosCancelados !== 1 ? "s" : ""}`
+        : "Horario eliminado";
+      toast(msg);
+      cargarMes();
+    } else toast(res.error || "No se puede eliminar", "error");
     setConfirmDelete(null);
   };
 
@@ -385,9 +389,17 @@ function GestionAgenda() {
                   <span className="text-sm text-gray-800 capitalize">{formatFecha(a.fecha)}</span>
                   <span className="text-sm text-gray-500 font-mono">{a.hora_entrada} – {a.hora_salida}</span>
                   <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{a.duracion} min</span>
+                  {a.turnosActivos > 0 && (
+                    <span className="text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                      {a.turnosActivos} turno{a.turnosActivos !== 1 ? "s" : ""}
+                    </span>
+                  )}
                 </div>
-                <button onClick={() => setConfirmDelete(a.id)} className="text-xs text-red-500 hover:text-red-700 hover:underline px-2">
-                  Eliminar
+                <button
+                  onClick={() => setConfirmDelete({ id: a.id, turnosActivos: a.turnosActivos })}
+                  className="text-xs text-red-500 hover:text-red-700 hover:underline px-2"
+                >
+                  {a.turnosActivos > 0 ? "Cancelar día" : "Eliminar"}
                 </button>
               </li>
             ))}
@@ -399,9 +411,13 @@ function GestionAgenda() {
 
       {confirmDelete !== null && (
         <ConfirmDialog
-          message="¿Eliminar este horario de la agenda?"
-          confirmLabel="Eliminar"
-          onConfirm={() => eliminar(confirmDelete)}
+          message={
+            confirmDelete.turnosActivos > 0
+              ? `Este día tiene ${confirmDelete.turnosActivos} turno${confirmDelete.turnosActivos !== 1 ? "s" : ""} activo${confirmDelete.turnosActivos !== 1 ? "s" : ""}. Se cancelarán todos y se notificará a los pacientes por email.`
+              : "¿Eliminar este horario de la agenda?"
+          }
+          confirmLabel={confirmDelete.turnosActivos > 0 ? "Cancelar día y notificar" : "Eliminar"}
+          onConfirm={() => eliminar(confirmDelete.id, confirmDelete.turnosActivos > 0)}
           onCancel={() => setConfirmDelete(null)}
         />
       )}

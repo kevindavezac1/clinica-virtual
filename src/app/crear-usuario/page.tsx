@@ -41,6 +41,11 @@ function CrearUsuario() {
     e.preventDefault();
     const pwCheck = validatePassword(form.password);
     if (!pwCheck.valid) { toast(pwCheck.error!, "error"); return; }
+    const fechaNac = new Date(form.fecha_nacimiento);
+    const hoy = new Date();
+    const edad = hoy.getFullYear() - fechaNac.getFullYear() -
+      (hoy < new Date(hoy.getFullYear(), fechaNac.getMonth(), fechaNac.getDate()) ? 1 : 0);
+    if (edad < 18) { toast("El usuario debe ser mayor de 18 años", "error"); return; }
     if (form.rol === "Medico" && !form.id_especialidad) {
       toast("Seleccioná una especialidad para el médico", "error");
       return;
