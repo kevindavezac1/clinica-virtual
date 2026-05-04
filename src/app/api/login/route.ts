@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     const password = typeof body.password === "string" ? body.password : "";
 
     const rateLimitKey = `${ip}:${usuario}`;
-    const { limited, minutesLeft } = isRateLimited(rateLimitKey);
+    const { limited, minutesLeft } = await isRateLimited(rateLimitKey);
     if (limited) {
       return NextResponse.json(
         { codigo: -1, mensaje: `Demasiados intentos fallidos. Intentá en ${minutesLeft} minuto(s).`, payload: [] },
@@ -29,11 +29,11 @@ export async function POST(req: NextRequest) {
     });
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      recordFailedAttempt(rateLimitKey);
+      await recordFailedAttempt(rateLimitKey);
       return NextResponse.json({ codigo: -1, mensaje: "Usuario o contraseña incorrecta", payload: [] });
     }
 
-    clearAttempts(rateLimitKey);
+    await clearAttempts(rateLimitKey);
     const { password: _, ...userSafe } = user;
 
     const accessToken = await signToken({ sub: userSafe.id, id: userSafe.id, name: userSafe.nombre, rol: userSafe.rol });

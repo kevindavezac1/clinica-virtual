@@ -1,37 +1,50 @@
-const store = new Map<string, { count: number; windowStart: number; blockedUntil?: number }>();
+import { prisma } from "@/lib/prisma";
 
 const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 15 * 60 * 1000;
 const BLOCK_MS = 15 * 60 * 1000;
 
-export function isRateLimited(key: string): { limited: boolean; minutesLeft?: number } {
-  const now = Date.now();
-  const entry = store.get(key);
+export async function isRateLimited(key: string): Promise<{ limited: boolean; minutesLeft?: number }> {
+  const now = new Date();
+  const entry = await prisma.loginAttempt.findUnique({ where: { key } });
   if (!entry) return { limited: false };
-  if (entry.blockedUntil) {
-    if (now < entry.blockedUntil) {
-      return { limited: true, minutesLeft: Math.ceil((entry.blockedUntil - now) / 60000) };
+
+  if (entry.blocked_until) {
+    if (now < entry.blocked_until) {
+      const minutesLeft = Math.ceil((entry.blocked_until.getTime() - now.getTime()) / 60000);
+      return { limited: true, minutesLeft };
     }
-    store.delete(key);
+    await prisma.loginAttempt.delete({ where: { key } });
   }
+
   return { limited: false };
 }
 
-export function recordFailedAttempt(key: string): void {
-  const now = Date.now();
-  const entry = store.get(key);
-  if (!entry || now - entry.windowStart > WINDOW_MS) {
-    store.set(key, { count: 1, windowStart: now });
+export async function recordFailedAttempt(key: string): Promise<void> {
+  const now = new Date();
+  const windowStart = new Date(now.getTime() - WINDOW_MS);
+
+  const entry = await prisma.loginAttempt.findUnique({ where: { key } });
+
+  if (!entry || entry.window_start < windowStart) {
+    await prisma.loginAttempt.upsert({
+      where: { key },
+      create: { key, count: 1, window_start: now },
+      update: { count: 1, window_start: now, blocked_until: null },
+    });
     return;
   }
+
   const newCount = entry.count + 1;
-  if (newCount >= MAX_ATTEMPTS) {
-    store.set(key, { ...entry, count: newCount, blockedUntil: now + BLOCK_MS });
-  } else {
-    store.set(key, { ...entry, count: newCount });
-  }
+  await prisma.loginAttempt.update({
+    where: { key },
+    data: {
+      count: newCount,
+      blocked_until: newCount >= MAX_ATTEMPTS ? new Date(now.getTime() + BLOCK_MS) : null,
+    },
+  });
 }
 
-export function clearAttempts(key: string): void {
-  store.delete(key);
+export async function clearAttempts(key: string): Promise<void> {
+  await prisma.loginAttempt.deleteMany({ where: { key } }).catch(() => {});
 }

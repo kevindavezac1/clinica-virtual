@@ -115,3 +115,13 @@ model MedicoEspecialidad {
   @@id([id_medico, id_especialidad])
   @@map("medico_especialidad")
 }
+
+model LoginAttempt {
+  id            Int       @id @default(autoincrement())
+  key           String    @unique @db.VarChar(200)
+  count         Int       @default(0)
+  window_start  DateTime
+  blocked_until DateTime?
+
+  @@map("login_attempt")
+}
