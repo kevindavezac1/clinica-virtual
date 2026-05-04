@@ -9,12 +9,11 @@ const REFRESH_DAYS = 7;
 
 export async function POST(req: NextRequest) {
   try {
-    const ip = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? "unknown";
     const body = await req.json();
     const usuario = sanitizeString(body.usuario);
     const password = typeof body.password === "string" ? body.password : "";
 
-    const rateLimitKey = `${ip}:${usuario}`;
+    const rateLimitKey = `login:${usuario}`;
     const { limited, minutesLeft } = await isRateLimited(rateLimitKey);
     if (limited) {
       return NextResponse.json(
