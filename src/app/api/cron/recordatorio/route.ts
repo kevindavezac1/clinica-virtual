@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendRecordatorio } from "@/lib/email";
+import { sendRecordatorioWhatsApp } from "@/lib/whatsapp";
 
 function formatFecha(fecha: Date): string {
   return fecha.toLocaleDateString("es-AR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
       recordatorio_enviado: false,
     },
     include: {
-      paciente: { select: { nombre: true, apellido: true, email: true } },
+      paciente: { select: { nombre: true, apellido: true, email: true, telefono: true } },
       agenda: {
         include: {
           medico: { select: { nombre: true, apellido: true } },
@@ -42,14 +43,21 @@ export async function GET(req: NextRequest) {
 
   for (const turno of turnos) {
     try {
-      await sendRecordatorio(
-        turno.paciente.email,
-        `${turno.paciente.nombre} ${turno.paciente.apellido}`,
-        formatFecha(turno.fecha),
-        turno.hora,
-        `Dr/a. ${turno.agenda.medico.nombre} ${turno.agenda.medico.apellido}`,
-        turno.agenda.especialidad.descripcion,
-      );
+      const paciente = `${turno.paciente.nombre} ${turno.paciente.apellido}`;
+      const fecha = formatFecha(turno.fecha);
+      const medico = `Dr/a. ${turno.agenda.medico.nombre} ${turno.agenda.medico.apellido}`;
+      const especialidad = turno.agenda.especialidad.descripcion;
+
+      await sendRecordatorio(turno.paciente.email, paciente, fecha, turno.hora, medico, especialidad);
+
+      if (turno.paciente.telefono) {
+        try {
+          await sendRecordatorioWhatsApp(turno.paciente.telefono, paciente, fecha, turno.hora, medico, especialidad);
+        } catch (wErr) {
+          console.error(`[cron/recordatorio] WhatsApp error turno ${turno.id}:`, wErr);
+        }
+      }
+
       await prisma.turno.update({
         where: { id: turno.id },
         data: { recordatorio_enviado: true },
