@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateRequest, AuthError } from "@/lib/auth";
+import { decrypt } from "@/lib/crypto";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -35,8 +36,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       fecha: t.fecha.toISOString().split("T")[0],
       hora: t.hora,
       estado: t.estado,
-      nota_paciente: t.nota,
-      nota_medico: t.nota_medico,
+      nota_paciente: decrypt(t.nota),
+      nota_medico: decrypt(t.nota_medico),
       medico: `Dr/a. ${t.agenda.medico.nombre} ${t.agenda.medico.apellido}`,
       especialidad: t.agenda.especialidad.descripcion,
       cobertura: t.cobertura.nombre,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateRequest, AuthError } from "@/lib/auth";
 import { sendTurnoConfirmado, sendTurnoCancelado, sendTurnoCanceladoPorPaciente } from "@/lib/email";
+import { encrypt } from "@/lib/crypto";
 
 function formatFecha(fecha: Date): string {
   return fecha.toLocaleDateString("es-AR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
@@ -19,7 +20,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
       await prisma.turno.update({
         where: { id: Number(id) },
-        data: { nota_medico: body.nota_medico ?? null },
+        data: { nota_medico: body.nota_medico ? encrypt(body.nota_medico) : null },
       });
       return NextResponse.json({ codigo: 200, mensaje: "Nota clínica guardada", payload: [] });
     }
@@ -97,7 +98,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const { nota, id_agenda, fecha, hora, id_paciente, id_cobertura } = await req.json();
     await prisma.turno.update({
       where: { id: Number(id) },
-      data: { nota, id_agenda, fecha: new Date(fecha), hora, id_paciente, id_cobertura },
+      data: { nota: encrypt(nota), id_agenda, fecha: new Date(fecha), hora, id_paciente, id_cobertura },
     });
     return NextResponse.json({ codigo: 200, mensaje: "Turno modificado", payload: [] });
   } catch (error) {

@@ -4,6 +4,7 @@ import { validateRequest, AuthError } from "@/lib/auth";
 import { sendTurnoPendiente } from "@/lib/email";
 import { isFeriado } from "@/lib/feriados";
 import { sanitizeNote } from "@/lib/sanitize";
+import { encrypt, decrypt } from "@/lib/crypto";
 
 function formatFecha(fecha: Date): string {
   return fecha.toLocaleDateString("es-AR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
@@ -38,7 +39,7 @@ export async function GET(req: NextRequest) {
       id_turno: t.id,
       hora: t.hora,
       estado: t.estado,
-      nota: t.nota,
+      nota: decrypt(t.nota),
       nombre_paciente: `${t.paciente.apellido}, ${t.paciente.nombre}`,
       nombre_medico: `${t.agenda.medico.apellido}, ${t.agenda.medico.nombre}`,
       especialidad: t.agenda.especialidad.descripcion,
@@ -58,7 +59,8 @@ export async function POST(req: NextRequest) {
   try {
     await validateRequest(req);
     const body = await req.json();
-    const nota = sanitizeNote(body.nota);
+    const notaRaw = sanitizeNote(body.nota);
+    const nota = encrypt(notaRaw);
     const { id_agenda, fecha, hora, id_paciente, id_cobertura } = body;
 
     const feriadoCheck = await isFeriado(fecha);

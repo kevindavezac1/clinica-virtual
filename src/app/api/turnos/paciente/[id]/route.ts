@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateRequest, AuthError } from "@/lib/auth";
+import { decrypt } from "@/lib/crypto";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const payload = turnos.map((t) => ({
       id_turno: t.id,
-      nota: t.nota,
+      nota: decrypt(t.nota),
       estado: t.estado,
       fecha: t.fecha,
       hora: t.hora,

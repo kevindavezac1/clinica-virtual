@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { validateRequest, AuthError } from "@/lib/auth";
 import { validatePassword } from "@/lib/validatePassword";
 import { sanitizeString } from "@/lib/sanitize";
+import { encrypt, decrypt, hmacHex } from "@/lib/crypto";
 import bcrypt from "bcryptjs";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -18,10 +19,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ codigo: -1, mensaje: "Usuario no encontrado", payload: [] });
     }
 
-    const { password: _, cobertura, ...rest } = usuario;
+    const { password: _, cobertura, dni_hash: _h, ...rest } = usuario;
     return NextResponse.json({
       codigo: 200, mensaje: "OK",
-      payload: [{ ...rest, nombre_cobertura: cobertura?.nombre ?? null }],
+      payload: [{
+        ...rest,
+        dni: decrypt(rest.dni) ?? "",
+        telefono: decrypt(rest.telefono) ?? "",
+        nombre_cobertura: cobertura?.nombre ?? null,
+      }],
     });
   } catch (error) {
     if (error instanceof AuthError) {
@@ -45,17 +51,20 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const body = await req.json();
     const { dni, apellido, nombre, fecha_nacimiento, password, rol, email, telefono, id_cobertura } = body;
 
+    const dniRaw = sanitizeString(dni);
+    const telefonoRaw = sanitizeString(telefono);
+
     const updateData: Record<string, unknown> = {
-      dni: sanitizeString(dni),
+      dni: encrypt(dniRaw)!,
+      dni_hash: hmacHex(dniRaw ?? ""),
       apellido: sanitizeString(apellido),
       nombre: sanitizeString(nombre),
       fecha_nacimiento: new Date(fecha_nacimiento),
       email: sanitizeString(email),
-      telefono: sanitizeString(telefono),
+      telefono: encrypt(telefonoRaw)!,
       id_cobertura: id_cobertura ? Number(id_cobertura) : null,
     };
 
-    // Only admin can change rol
     if (isAdmin && rol) {
       updateData.rol = rol;
     }

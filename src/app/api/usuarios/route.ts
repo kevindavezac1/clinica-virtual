@@ -3,18 +3,41 @@ import { prisma } from "@/lib/prisma";
 import { validateRequest, AuthError } from "@/lib/auth";
 import { validatePassword } from "@/lib/validatePassword";
 import { sanitizeString, sanitizeEmail } from "@/lib/sanitize";
+import { encrypt, decrypt, hmacHex } from "@/lib/crypto";
 import bcrypt from "bcryptjs";
 
 const ROLES_VALIDOS = ["Paciente", "Medico", "Operador", "Admin"];
 
+function decryptUsuario<T extends { dni: string; telefono: string; dni_hash?: string | null }>(u: T) {
+  return { ...u, dni: decrypt(u.dni) ?? "", telefono: decrypt(u.telefono) ?? "" };
+}
+
 export async function GET(req: NextRequest) {
   try {
     await validateRequest(req);
+    const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
+    const rol = req.nextUrl.searchParams.get("rol") ?? "";
+    const limit = Number(req.nextUrl.searchParams.get("limit")) || undefined;
+
+    const where: Record<string, unknown> = {};
+    if (rol) where.rol = rol;
+    if (q) {
+      where.OR = [
+        { nombre: { contains: q, mode: "insensitive" } },
+        { apellido: { contains: q, mode: "insensitive" } },
+        { email: { contains: q, mode: "insensitive" } },
+        { dni_hash: hmacHex(q) },
+      ];
+    }
+
     const usuarios = await prisma.usuario.findMany({
+      where,
       include: { cobertura: { select: { nombre: true } } },
+      ...(limit ? { take: limit } : {}),
     });
-    const payload = usuarios.map(({ cobertura, password: _pw, ...u }) => ({
-      ...u,
+
+    const payload = usuarios.map(({ cobertura, password: _pw, dni_hash: _h, ...u }) => ({
+      ...decryptUsuario(u),
       nombre_cobertura: cobertura?.nombre ?? null,
     }));
     return NextResponse.json({ codigo: 200, mensaje: "OK", payload });
@@ -28,7 +51,6 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    // Try to get auth — optional (public registration allowed for Paciente only)
     let callerRol: string | null = null;
     try {
       const jwtPayload = await validateRequest(req);
@@ -38,17 +60,16 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const dni = sanitizeString(body.dni, 20);
+    const dniRaw = sanitizeString(body.dni, 20);
     const apellido = sanitizeString(body.apellido, 100);
     const nombre = sanitizeString(body.nombre, 100);
     const email = sanitizeEmail(body.email);
-    const telefono = sanitizeString(body.telefono, 20);
+    const telefonoRaw = sanitizeString(body.telefono, 20);
     const { fecha_nacimiento, password, id_cobertura, id_especialidad } = body;
 
-    // Unauthenticated → force Paciente; authenticated admin → any role
     const rol: string = callerRol === "Admin" ? (body.rol ?? "Paciente") : "Paciente";
 
-    if (!dni || !apellido || !nombre || !email) {
+    if (!dniRaw || !apellido || !nombre || !email) {
       return NextResponse.json({ error: "Faltan campos requeridos o email inválido" }, { status: 400 });
     }
 
@@ -61,7 +82,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: pwCheck.error }, { status: 400 });
     }
 
-    const existente = await prisma.usuario.findFirst({ where: { dni } });
+    const dniHash = hmacHex(dniRaw);
+    const existente = await prisma.usuario.findFirst({ where: { dni_hash: dniHash } });
     if (existente) {
       return NextResponse.json({ error: "Ya existe un usuario registrado con ese DNI" }, { status: 400 });
     }
@@ -71,10 +93,15 @@ export async function POST(req: NextRequest) {
     const usuario = await prisma.$transaction(async (tx) => {
       const u = await tx.usuario.create({
         data: {
-          dni, apellido, nombre,
+          dni: encrypt(dniRaw)!,
+          dni_hash: dniHash,
+          apellido,
+          nombre,
           fecha_nacimiento: new Date(fecha_nacimiento),
           password: hashedPassword,
-          rol, email, telefono,
+          rol,
+          email,
+          telefono: encrypt(telefonoRaw)!,
           id_cobertura: id_cobertura ? Number(id_cobertura) : null,
         },
       });

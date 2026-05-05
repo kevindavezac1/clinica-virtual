@@ -26,6 +26,8 @@ function ListarUsuarios() {
   const [busqueda, setBusqueda] = useState("");
   const [filtroRol, setFiltroRol] = useState("");
   const [editando, setEditando] = useState<Usuario | null>(null);
+  const [pagina, setPagina] = useState(1);
+  const POR_PAGINA = 25;
 
   const cargar = async () => {
     const [usersRes, cobRes] = await Promise.all([
@@ -48,8 +50,10 @@ function ListarUsuarios() {
     const coincideRol = !filtroRol || u.rol === filtroRol;
     return coincideBusqueda && coincideRol;
   });
+  const totalPaginas = Math.ceil(filtrados.length / POR_PAGINA);
+  const paginados = filtrados.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
 
-  const limpiarFiltros = () => { setBusqueda(""); setFiltroRol(""); };
+  const limpiarFiltros = () => { setBusqueda(""); setFiltroRol(""); setPagina(1); };
 
   const guardarEdicion = async () => {
     if (!editando) return;
@@ -75,9 +79,9 @@ function ListarUsuarios() {
           className="input-field flex-1 min-w-[200px]"
           placeholder="Buscar por nombre, apellido, DNI o email..."
           value={busqueda}
-          onChange={e => setBusqueda(e.target.value)}
+          onChange={e => { setBusqueda(e.target.value); setPagina(1); }}
         />
-        <select className="select-field max-w-[180px]" value={filtroRol} onChange={e => setFiltroRol(e.target.value)}>
+        <select className="select-field max-w-[180px]" value={filtroRol} onChange={e => { setFiltroRol(e.target.value); setPagina(1); }}>
           <option value="">Todos los roles</option>
           {["Operador","Medico","Paciente","Administrador"].map(r => <option key={r} value={r}>{r}</option>)}
         </select>
@@ -97,7 +101,7 @@ function ListarUsuarios() {
             </tr>
           </thead>
           <tbody>
-            {filtrados.map(u => (
+            {paginados.map(u => (
               <tr key={u.id} className="hover:bg-gray-50">
                 <td className="table-cell">{u.id}</td>
                 <td className="table-cell">{u.nombre}</td>
@@ -115,6 +119,26 @@ function ListarUsuarios() {
           </tbody>
         </table>
       </div>
+
+      {totalPaginas > 1 && (
+        <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
+          <button
+            onClick={() => setPagina(p => Math.max(1, p - 1))}
+            disabled={pagina === 1}
+            className="btn-secondary disabled:opacity-40"
+          >
+            ← Anterior
+          </button>
+          <span>Página {pagina} de {totalPaginas}</span>
+          <button
+            onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))}
+            disabled={pagina === totalPaginas}
+            className="btn-secondary disabled:opacity-40"
+          >
+            Siguiente →
+          </button>
+        </div>
+      )}
 
       {editando && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">

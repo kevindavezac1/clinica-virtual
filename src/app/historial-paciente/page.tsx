@@ -67,19 +67,10 @@ function HistorialPaciente() {
     if (busqueda.length < 2) { setPacientes([]); return; }
     const t = setTimeout(async () => {
       setLoadingPacientes(true);
-      const res = await fetch("/api/usuarios", { headers: { Authorization: token! } });
+      const params = new URLSearchParams({ q: busqueda, rol: "Paciente", limit: "8" });
+      const res = await fetch(`/api/usuarios?${params}`, { headers: { Authorization: token! } });
       const data = await res.json();
-      if (data.payload) {
-        const q = busqueda.toLowerCase();
-        setPacientes(
-          (data.payload as Paciente[])
-            .filter((u: Paciente & { rol?: string }) =>
-              u.rol === "Paciente" &&
-              (`${u.nombre} ${u.apellido}`.toLowerCase().includes(q) || u.dni?.toLowerCase().includes(q))
-            )
-            .slice(0, 8)
-        );
-      }
+      if (data.payload) setPacientes(data.payload as Paciente[]);
       setLoadingPacientes(false);
     }, 300);
     return () => clearTimeout(t);

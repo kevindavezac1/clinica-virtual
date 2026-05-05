@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateRequest, AuthError } from "@/lib/auth";
+import { decrypt } from "@/lib/crypto";
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,8 +33,8 @@ export async function POST(req: NextRequest) {
       nombre_medico: `${t.agenda.medico.apellido}, ${t.agenda.medico.nombre}`,
       fecha: t.fecha,
       hora: t.hora,
-      nota: t.nota,
-      nota_medico: t.nota_medico,
+      nota: decrypt(t.nota),
+      nota_medico: decrypt(t.nota_medico),
       estado: t.estado,
       cobertura: t.cobertura.nombre,
     }));

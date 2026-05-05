@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { signToken, generateRefreshToken } from "@/lib/auth";
 import { isRateLimited, recordFailedAttempt, clearAttempts } from "@/lib/rateLimit";
 import { sanitizeString } from "@/lib/sanitize";
+import { hmacHex } from "@/lib/crypto";
 import bcrypt from "bcryptjs";
 
 const REFRESH_DAYS = 7;
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
     }
 
     const user = await prisma.usuario.findFirst({
-      where: { dni: usuario },
+      where: { dni_hash: hmacHex(usuario ?? "") },
       select: { id: true, nombre: true, apellido: true, rol: true, password: true },
     });
 
