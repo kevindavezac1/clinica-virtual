@@ -27,6 +27,6 @@ export async function sendRecordatorioWhatsApp(
   await client.messages.create({
     from: process.env.TWILIO_WHATSAPP_FROM,
     to,
-    body: `Hola ${paciente} 👋\n\nTe recordamos que mañana tenés turno médico:\n\n🩺 *${medico}*\n📋 ${especialidad}\n📅 ${fecha}\n⏰ ${hora}\n\nSi necesitás cancelar, ingresá a la app. — Consultorios Esperanza`,
+    body: `Hola ${paciente} 👋\n\nTe recordamos que mañana tenés turno médico:\n\n🩺 *${medico}*\n📋 ${especialidad}\n📅 ${fecha}\n⏰ ${hora}\n\nSi necesitás cancelar: ${process.env.NEXT_PUBLIC_BASE_URL}/mis-turnos\n\n— Consultorios Esperanza`,
   });
 }
