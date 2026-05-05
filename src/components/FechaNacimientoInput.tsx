@@ -1,9 +1,4 @@
-import { useMemo } from "react";
-
-const MESES = [
-  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
-];
+import { useState } from "react";
 
 interface Props {
   value: string;
@@ -12,65 +7,75 @@ interface Props {
 }
 
 export default function FechaNacimientoInput({ value, onChange, required }: Props) {
-  const [yyyy, mm, dd] = value ? value.split("-") : ["", "", ""];
+  const partes = value ? value.split("-") : ["", "", ""];
+  const [yyyy, setYyyy] = useState(partes[0]);
+  const [mm, setMm] = useState(partes[1] || "");
+  const [dd, setDd] = useState(partes[2] || "");
 
   const anioActual = new Date().getFullYear();
-  const anios = useMemo(
-    () => Array.from({ length: anioActual - 1900 + 1 }, (_, i) => anioActual - i),
-    [anioActual]
-  );
 
-  const diasEnMes = useMemo(() => {
-    if (!yyyy || !mm) return 31;
-    return new Date(Number(yyyy), Number(mm), 0).getDate();
-  }, [yyyy, mm]);
-
-  const update = (newYyyy: string, newMm: string, newDd: string) => {
-    if (!newYyyy || !newMm || !newDd) { onChange(""); return; }
-    const maxDia = new Date(Number(newYyyy), Number(newMm), 0).getDate();
-    const diaFinal = Math.min(Number(newDd), maxDia);
-    onChange(`${newYyyy}-${newMm.padStart(2, "0")}-${String(diaFinal).padStart(2, "0")}`);
+  const emit = (newYyyy: string, newMm: string, newDd: string) => {
+    const y = Number(newYyyy), m = Number(newMm), d = Number(newDd);
+    if (!y || !m || !d || newYyyy.length < 4) { onChange(""); return; }
+    if (y < 1900 || y > anioActual) { onChange(""); return; }
+    if (m < 1 || m > 12) { onChange(""); return; }
+    if (d < 1) { onChange(""); return; }
+    const maxDia = new Date(y, m, 0).getDate();
+    const diaFinal = Math.min(d, maxDia);
+    onChange(`${newYyyy}-${String(m).padStart(2, "0")}-${String(diaFinal).padStart(2, "0")}`);
   };
 
-  const selectClass = "flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white";
+  const inputClass = "min-w-0 w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900 text-sm text-center focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow shadow-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 
   return (
-    <div className="flex gap-2">
-      <select
-        className={selectClass}
-        value={dd || ""}
-        onChange={e => update(yyyy, mm, e.target.value)}
+    <div className="grid grid-cols-3 gap-2">
+      <input
+        type="number"
+        className={inputClass}
+        placeholder="DD"
+        value={dd}
+        min={1}
+        max={31}
+        onChange={e => {
+          let v = e.target.value.replace(/\D/g, "").slice(0, 2);
+          if (Number(v) > 31) v = "31";
+          setDd(v);
+          emit(yyyy, mm, v);
+        }}
         required={required}
-      >
-        <option value="">Día</option>
-        {Array.from({ length: diasEnMes }, (_, i) => i + 1).map(d => (
-          <option key={d} value={String(d).padStart(2, "0")}>{d}</option>
-        ))}
-      </select>
+      />
 
-      <select
-        className={selectClass}
-        value={mm || ""}
-        onChange={e => update(yyyy, e.target.value, dd)}
+      <input
+        type="number"
+        className={inputClass}
+        placeholder="MM"
+        value={mm}
+        min={1}
+        max={12}
+        onChange={e => {
+          let v = e.target.value.replace(/\D/g, "").slice(0, 2);
+          if (Number(v) > 12) v = "12";
+          setMm(v);
+          emit(yyyy, v, dd);
+        }}
         required={required}
-      >
-        <option value="">Mes</option>
-        {MESES.map((nombre, i) => (
-          <option key={i} value={String(i + 1).padStart(2, "0")}>{nombre}</option>
-        ))}
-      </select>
+      />
 
-      <select
-        className={`${selectClass} flex-[1.4]`}
-        value={yyyy || ""}
-        onChange={e => update(e.target.value, mm, dd)}
+      <input
+        type="number"
+        className={inputClass}
+        placeholder="AAAA"
+        value={yyyy}
+        min={1900}
+        max={anioActual}
+        onChange={e => {
+          let v = e.target.value.replace(/\D/g, "").slice(0, 4);
+          if (v.length === 4 && Number(v) > anioActual) v = String(anioActual);
+          setYyyy(v);
+          emit(v, mm, dd);
+        }}
         required={required}
-      >
-        <option value="">Año</option>
-        {anios.map(a => (
-          <option key={a} value={a}>{a}</option>
-        ))}
-      </select>
+      />
     </div>
   );
 }

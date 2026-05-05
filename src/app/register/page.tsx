@@ -15,6 +15,7 @@ export default function RegisterPage() {
   const [repeatPassword, setRepeatPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const [form, setForm] = useState({
     dni: "", nombre: "", apellido: "", password: "",
@@ -29,8 +30,22 @@ export default function RegisterPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     let value = e.target.value;
     if (e.target.name === "dni") value = value.replace(/\D/g, "").slice(0, 8);
-    if (e.target.name === "telefono") value = value.replace(/\D/g, "");
+    if (e.target.name === "telefono") value = value.replace(/\D/g, "").slice(0, 15);
+    if (e.target.name === "nombre" || e.target.name === "apellido") value = value.replace(/[0-9]/g, "");
     setForm(f => ({ ...f, [e.target.name]: value }));
+    if (fieldErrors[e.target.name]) setFieldErrors(f => ({ ...f, [e.target.name]: "" }));
+  };
+
+  const validateField = (name: string, value: string): string => {
+    if (name === "dni" && value.length > 0 && value.length < 7) return "Debe tener entre 7 y 8 dígitos";
+    if (name === "telefono" && value.length > 0 && value.length > 0 && value.length < 10) return "10 dígitos sin 0 ni 15 (ej: 3496500494)";
+    if ((name === "nombre" || name === "apellido") && value.trim().length === 0 && value.length > 0) return "No puede ser solo espacios";
+    return "";
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const err = validateField(e.target.name, e.target.value);
+    setFieldErrors(f => ({ ...f, [e.target.name]: err }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,11 +53,9 @@ export default function RegisterPage() {
     setError("");
     const pwCheck = validatePassword(form.password);
     if (!pwCheck.valid) { setError(pwCheck.error!); return; }
-    if (form.password !== repeatPassword) {
-      setError("Las contraseñas no coinciden");
-      return;
-    }
+    if (form.password !== repeatPassword) { setError("Las contraseñas no coinciden"); return; }
     if (form.dni.length < 7) { setError("El DNI debe tener entre 7 y 8 dígitos"); return; }
+    if (form.telefono.length < 10) { setError("El teléfono debe tener 10 dígitos sin 0 ni 15"); return; }
     setLoading(true);
     const res = await fetch("/api/usuarios", {
       method: "POST",
@@ -59,6 +72,10 @@ export default function RegisterPage() {
     }
   };
 
+  const fe = (name: string) => fieldErrors[name]
+    ? <p className="text-xs text-red-500 mt-1">{fieldErrors[name]}</p>
+    : null;
+
   return (
     <div className="max-w-lg mx-auto py-8">
       <div className="card">
@@ -67,17 +84,20 @@ export default function RegisterPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label-field">DNI</label>
-              <input name="dni" className="input-field" value={form.dni} onChange={handleChange} inputMode="numeric" maxLength={8} required />
+              <input name="dni" className="input-field" value={form.dni} onChange={handleChange} onBlur={handleBlur} inputMode="numeric" maxLength={8} required />
+              {fe("dni")}
             </div>
             <div>
               <label className="label-field">Nombre</label>
-              <input name="nombre" className="input-field" value={form.nombre} onChange={handleChange} required />
+              <input name="nombre" className="input-field" value={form.nombre} onChange={handleChange} onBlur={handleBlur} required />
+              {fe("nombre")}
             </div>
             <div>
               <label className="label-field">Apellido</label>
-              <input name="apellido" className="input-field" value={form.apellido} onChange={handleChange} required />
+              <input name="apellido" className="input-field" value={form.apellido} onChange={handleChange} onBlur={handleBlur} required />
+              {fe("apellido")}
             </div>
-            <div>
+            <div className="col-span-2">
               <label className="label-field">Fecha de nacimiento</label>
               <FechaNacimientoInput value={form.fecha_nacimiento} onChange={v => setForm(f => ({ ...f, fecha_nacimiento: v }))} required />
             </div>
@@ -96,7 +116,8 @@ export default function RegisterPage() {
             </div>
             <div>
               <label className="label-field">Teléfono</label>
-              <input name="telefono" className="input-field" value={form.telefono} onChange={handleChange} inputMode="numeric" required />
+              <input name="telefono" className="input-field" value={form.telefono} onChange={handleChange} onBlur={handleBlur} inputMode="numeric" placeholder="Ej: 3496500494" required />
+              {fe("telefono")}
             </div>
           </div>
           <div>

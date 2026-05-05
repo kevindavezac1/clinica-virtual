@@ -115,6 +115,25 @@ export async function sendTurnoCancelado(to: string, paciente: string, fecha: st
   });
 }
 
+export async function sendRecordatorio(to: string, paciente: string, fecha: string, hora: string, medico: string, especialidad: string) {
+  await transporter.sendMail({
+    from: FROM,
+    to,
+    subject: "Recordatorio: tenés turno mañana — Consultorios Esperanza",
+    html: wrap(`
+      <h2 style="color:#1e3a5f;margin-top:0">⏰ Recordatorio de turno</h2>
+      <p>Hola <strong>${paciente}</strong>, te recordamos que mañana tenés un turno médico.</p>
+      <table style="border-collapse:collapse;width:100%;margin:16px 0">
+        <tr><td style="padding:8px 0;color:#666;width:120px">Médico</td><td style="padding:8px 0;font-weight:600">${medico}</td></tr>
+        <tr><td style="padding:8px 0;color:#666">Especialidad</td><td style="padding:8px 0;font-weight:600">${especialidad}</td></tr>
+        <tr><td style="padding:8px 0;color:#666">Fecha</td><td style="padding:8px 0;font-weight:600">${fecha}</td></tr>
+        <tr><td style="padding:8px 0;color:#666">Hora</td><td style="padding:8px 0;font-weight:600">${hora}</td></tr>
+      </table>
+      <p style="color:#666;font-size:14px">Si necesitás cancelar, ingresá a <a href="${BASE_URL}/mis-turnos" style="color:#1e3a5f">Mis turnos</a> antes de la hora del turno.</p>
+    `),
+  });
+}
+
 export async function sendTurnoCanceladoPorMedico(
   to: string,
   paciente: string,
