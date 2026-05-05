@@ -55,7 +55,8 @@ export async function GET(req: NextRequest) {
         data: { recordatorio_enviado: true },
       });
       enviados++;
-    } catch {
+    } catch (err) {
+      console.error(`[cron/recordatorio] Error turno ${turno.id}:`, err);
       errores.push(turno.id);
     }
   }

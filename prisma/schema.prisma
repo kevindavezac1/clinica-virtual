@@ -92,6 +92,7 @@ model Turno {
   id_paciente          Int
   id_cobertura         Int
   recordatorio_enviado Boolean   @default(false)
+  created_at           DateTime  @default(now())
   agenda               Agenda    @relation(fields: [id_agenda], references: [id])
   paciente             Usuario   @relation(fields: [id_paciente], references: [id])
   cobertura            Cobertura @relation(fields: [id_cobertura], references: [id])
