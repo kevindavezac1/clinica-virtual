@@ -6,7 +6,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Link from "next/link";
 
 interface Metrics {
-  turnosMes: { total: number; pendientes: number; confirmados: number; cancelados: number };
+  turnosMes: { total: number; pendientes: number; confirmados: number; cancelados: number; realizados: number; ausentes: number };
   turnosHoy: number;
   totalPacientes: number;
   totalMedicos: number;
@@ -63,6 +63,10 @@ function Dashboard() {
   const tasaCancelacion = data.turnosMes.total > 0
     ? Math.round((data.turnosMes.cancelados / data.turnosMes.total) * 100)
     : 0;
+  const totalCerrados = data.turnosMes.realizados + data.turnosMes.ausentes;
+  const tasaAsistencia = totalCerrados > 0
+    ? Math.round((data.turnosMes.realizados / totalCerrados) * 100)
+    : null;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -87,23 +91,26 @@ function Dashboard() {
           <h2 className="font-semibold text-gray-700 mb-4">Estados — {mesActual}</h2>
           <div className="space-y-3">
             {[
-              { label: "Pendientes", value: data.turnosMes.pendientes, color: "bg-yellow-400", pct: data.turnosMes.total },
-              { label: "Confirmados", value: data.turnosMes.confirmados, color: "bg-green-400", pct: data.turnosMes.total },
-              { label: "Cancelados", value: data.turnosMes.cancelados, color: "bg-red-400", pct: data.turnosMes.total },
-            ].map(({ label, value, color, pct }) => (
+              { label: "Pendientes", value: data.turnosMes.pendientes, color: "bg-yellow-400" },
+              { label: "Confirmados", value: data.turnosMes.confirmados, color: "bg-green-400" },
+              { label: "Realizados", value: data.turnosMes.realizados, color: "bg-teal-400" },
+              { label: "Ausentes", value: data.turnosMes.ausentes, color: "bg-orange-400" },
+              { label: "Cancelados", value: data.turnosMes.cancelados, color: "bg-red-400" },
+            ].map(({ label, value, color }) => (
               <div key={label}>
                 <div className="flex justify-between text-sm mb-1">
                   <span className="text-gray-600">{label}</span>
                   <span className="font-semibold text-gray-800">{value}</span>
                 </div>
                 <div className="w-full bg-gray-100 rounded-full h-2">
-                  <div className={`${color} h-2 rounded-full transition-all`} style={{ width: pct > 0 ? `${Math.round((value / pct) * 100)}%` : "0%" }} />
+                  <div className={`${color} h-2 rounded-full transition-all`} style={{ width: data.turnosMes.total > 0 ? `${Math.round((value / data.turnosMes.total) * 100)}%` : "0%" }} />
                 </div>
               </div>
             ))}
-            {tasaCancelacion > 0 && (
-              <p className="text-xs text-gray-400 mt-2">Tasa de cancelación: {tasaCancelacion}%</p>
-            )}
+            <div className="flex gap-4 mt-2">
+              {tasaCancelacion > 0 && <p className="text-xs text-gray-400">Cancelación: {tasaCancelacion}%</p>}
+              {tasaAsistencia !== null && <p className="text-xs text-teal-600 font-medium">Asistencia: {tasaAsistencia}%</p>}
+            </div>
           </div>
         </div>
 

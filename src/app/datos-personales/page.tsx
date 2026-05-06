@@ -11,7 +11,7 @@ interface Cobertura { id: number; nombre: string; }
 
 export default function DatosPersonalesPage() {
   return (
-    <ProtectedRoute allowedRole="Paciente">
+    <ProtectedRoute allowedRole={["Paciente", "Medico", "Operador"]}>
       <DatosPersonales />
     </ProtectedRoute>
   );
@@ -27,15 +27,17 @@ function DatosPersonales() {
 
   useEffect(() => {
     if (!user) return;
-    Promise.all([
+    const esPaciente = user.rol === "Paciente";
+    const fetches: Promise<unknown>[] = [
       fetch(`/api/usuarios/${user.id}`, { headers: { Authorization: token! } }).then(r => r.json()),
-      fetch("/api/coberturas").then(r => r.json()),
-    ]).then(([userData, coberturasData]) => {
-      if (userData.codigo === 200) {
-        const { password: _, ...withoutPassword } = userData.payload[0];
+      ...(esPaciente ? [fetch("/api/coberturas").then(r => r.json())] : []),
+    ];
+    Promise.all(fetches).then(([userData, coberturasData]) => {
+      if ((userData as { codigo: number }).codigo === 200) {
+        const { password: _, ...withoutPassword } = (userData as { codigo: number; payload: Record<string, string>[] }).payload[0];
         setUsuario(withoutPassword);
       }
-      setCoberturas(coberturasData);
+      if (coberturasData) setCoberturas(coberturasData as Cobertura[]);
     }).finally(() => setLoading(false));
   }, [user, token]);
 
@@ -101,12 +103,14 @@ function DatosPersonales() {
             />
           </div>
         )}
-        <div>
-          <label className="label-field">Cobertura</label>
-          <select name="id_cobertura" className="select-field" value={usuario.id_cobertura || ""} onChange={handleChange} disabled={!editMode}>
-            {coberturas.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-          </select>
-        </div>
+        {user?.rol === "Paciente" && (
+          <div>
+            <label className="label-field">Cobertura</label>
+            <select name="id_cobertura" className="select-field" value={usuario.id_cobertura || ""} onChange={handleChange} disabled={!editMode}>
+              {coberturas.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </select>
+          </div>
+        )}
         <div className="flex gap-3 pt-2">
           {!editMode ? (
             <button onClick={() => setEditMode(true)} className="btn-primary">Editar</button>

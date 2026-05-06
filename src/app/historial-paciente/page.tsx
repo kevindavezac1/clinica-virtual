@@ -28,6 +28,8 @@ function estadoBadge(estado: string) {
   const map: Record<string, string> = {
     Pendiente: "bg-yellow-100 text-yellow-800",
     Confirmado: "bg-green-100 text-green-800",
+    Realizado: "bg-teal-100 text-teal-800",
+    Ausente: "bg-orange-100 text-orange-700",
     Cancelado: "bg-red-100 text-red-700",
   };
   return (
@@ -47,7 +49,7 @@ function formatFecha(iso: string) {
 
 export default function HistorialPacientePage() {
   return (
-    <ProtectedRoute allowedRole={["Medico", "Administrador"]}>
+    <ProtectedRoute allowedRole={["Medico", "Operador"]}>
       <HistorialPaciente />
     </ProtectedRoute>
   );

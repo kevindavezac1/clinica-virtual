@@ -20,6 +20,8 @@ function estadoBadge(estado: string) {
     Pendiente: "bg-yellow-100 text-yellow-800",
     Confirmado: "bg-green-100 text-green-800",
     Cancelado: "bg-red-100 text-red-700",
+    Realizado: "bg-teal-100 text-teal-800",
+    Ausente: "bg-orange-100 text-orange-700",
   };
   return (
     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${map[estado] ?? "bg-gray-100 text-gray-600"}`}>
@@ -45,6 +47,8 @@ function VerAgendaOperador() {
   const [filtroEstado, setFiltroEstado] = useState("");
   const [filtroMedico, setFiltroMedico] = useState("");
   const [medicos, setMedicos] = useState<string[]>([]);
+  const [cancelando, setCancelando] = useState<number | null>(null);
+  const [confirmando, setConfirmando] = useState<number | null>(null);
 
   const cargar = async (f: string) => {
     setLoading(true);
@@ -74,6 +78,19 @@ function VerAgendaOperador() {
     return coincideBusqueda && coincideEstado && coincideMedico;
   });
 
+  const cambiarEstado = async (id: number, estado: string) => {
+    if (estado === "Cancelado" && !confirm("¿Cancelar este turno?")) return;
+    estado === "Cancelado" ? setCancelando(id) : setConfirmando(id);
+    await fetch(`/api/turnos/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: token! },
+      body: JSON.stringify({ estado }),
+    });
+    setCancelando(null);
+    setConfirmando(null);
+    cargar(fecha);
+  };
+
   const limpiar = () => { setBusqueda(""); setFiltroEstado(""); setFiltroMedico(""); };
   const hayFiltros = busqueda || filtroEstado || filtroMedico;
 
@@ -97,7 +114,7 @@ function VerAgendaOperador() {
         />
         <select className="select-field max-w-[180px]" value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
           <option value="">Todos los estados</option>
-          {["Pendiente", "Confirmado", "Cancelado"].map(e => <option key={e} value={e}>{e}</option>)}
+          {["Pendiente", "Confirmado", "Cancelado", "Realizado", "Ausente"].map(e => <option key={e} value={e}>{e}</option>)}
         </select>
         <select className="select-field max-w-[200px]" value={filtroMedico} onChange={e => setFiltroMedico(e.target.value)}>
           <option value="">Todos los médicos</option>
@@ -117,12 +134,13 @@ function VerAgendaOperador() {
                 <th className="table-header">Especialidad</th>
                 <th className="table-header">Paciente</th>
                 <th className="table-header">Cobertura</th>
-                <th className="table-header rounded-tr-xl">Estado</th>
+                <th className="table-header">Estado</th>
+                <th className="table-header rounded-tr-xl">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {filtrados.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-8 text-gray-400">No hay turnos para esta fecha</td></tr>
+                <tr><td colSpan={7} className="text-center py-8 text-gray-400">No hay turnos para esta fecha</td></tr>
               ) : filtrados.map(t => (
                 <tr key={t.id_turno} className="hover:bg-gray-50">
                   <td className="table-cell font-mono">{t.hora}</td>
@@ -131,6 +149,28 @@ function VerAgendaOperador() {
                   <td className="table-cell">{t.nombre_paciente}</td>
                   <td className="table-cell">{t.cobertura}</td>
                   <td className="table-cell">{estadoBadge(t.estado)}</td>
+                  <td className="table-cell">
+                    <div className="flex gap-2">
+                      {t.estado === "Pendiente" && (
+                        <button
+                          onClick={() => cambiarEstado(t.id_turno, "Confirmado")}
+                          disabled={confirmando === t.id_turno}
+                          className="text-xs text-green-700 hover:underline disabled:opacity-50"
+                        >
+                          {confirmando === t.id_turno ? "..." : "Confirmar"}
+                        </button>
+                      )}
+                      {t.estado !== "Cancelado" && t.estado !== "Realizado" && t.estado !== "Ausente" && (
+                        <button
+                          onClick={() => cambiarEstado(t.id_turno, "Cancelado")}
+                          disabled={cancelando === t.id_turno}
+                          className="text-xs text-red-600 hover:underline disabled:opacity-50"
+                        >
+                          {cancelando === t.id_turno ? "..." : "Cancelar"}
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>

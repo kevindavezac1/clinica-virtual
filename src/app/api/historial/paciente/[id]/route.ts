@@ -5,7 +5,10 @@ import { decrypt } from "@/lib/crypto";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await validateRequest(req);
+    const jwtPayload = await validateRequest(req);
+    if (jwtPayload.rol !== "Medico" && jwtPayload.rol !== "Operador") {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    }
     const { id } = await params;
 
     const turnos = await prisma.turno.findMany({

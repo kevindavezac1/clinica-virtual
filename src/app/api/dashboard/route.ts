@@ -79,6 +79,8 @@ export async function GET(req: NextRequest) {
     const pendientes = turnosMes.find(t => t.estado === "Pendiente")?._count.id ?? 0;
     const confirmados = turnosMes.find(t => t.estado === "Confirmado")?._count.id ?? 0;
     const cancelados = turnosMes.find(t => t.estado === "Cancelado")?._count.id ?? 0;
+    const realizados = turnosMes.find(t => t.estado === "Realizado")?._count.id ?? 0;
+    const ausentes = turnosMes.find(t => t.estado === "Ausente")?._count.id ?? 0;
 
     // Próximos 7 días
     const proximos7 = turnosProximos7.map(t => ({
@@ -89,7 +91,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       codigo: 200,
       payload: {
-        turnosMes: { total: totalMes, pendientes, confirmados, cancelados },
+        turnosMes: { total: totalMes, pendientes, confirmados, cancelados, realizados, ausentes },
         turnosHoy,
         totalPacientes,
         totalMedicos,
