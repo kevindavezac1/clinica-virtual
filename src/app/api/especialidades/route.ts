@@ -14,7 +14,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const payload = await validateRequest(req);
-    if (payload.rol !== "admin") {
+    if (payload.rol !== "Administrador") {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
     const { descripcion } = await req.json();

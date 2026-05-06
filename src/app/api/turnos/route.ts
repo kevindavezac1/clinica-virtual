@@ -82,17 +82,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Máximo 1 turno activo por especialidad
+    // Máximo 1 turno activo por especialidad (solo futuros)
     const agendaInfo = await prisma.agenda.findUnique({
       where: { id: id_agenda },
       select: { id_especialidad: true },
     });
     if (agendaInfo) {
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
       const turnoActivo = await prisma.turno.findFirst({
         where: {
           id_paciente,
           estado: { in: ["Pendiente", "Confirmado"] },
           agenda: { id_especialidad: agendaInfo.id_especialidad },
+          fecha: { gte: hoy },
         },
       });
       if (turnoActivo) {

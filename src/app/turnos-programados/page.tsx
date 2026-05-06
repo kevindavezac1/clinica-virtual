@@ -30,12 +30,19 @@ function estadoBadge(estado: string) {
     Pendiente: "bg-yellow-100 text-yellow-800",
     Confirmado: "bg-green-100 text-green-800",
     Cancelado: "bg-red-100 text-red-700",
+    Realizado: "bg-teal-100 text-teal-800",
+    Ausente: "bg-orange-100 text-orange-700",
   };
   return (
     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${map[estado] ?? "bg-gray-100 text-gray-600"}`}>
       {estado}
     </span>
   );
+}
+
+function esPasado(fecha: string, hora: string): boolean {
+  const dt = new Date(`${fecha.split("T")[0]}T${hora.padStart(5, "0")}:00-03:00`);
+  return dt < new Date();
 }
 
 export default function TurnosProgramadosPage() {
@@ -132,13 +139,27 @@ function TurnosProgramados() {
             <tbody>
               {turnos.length === 0 ? (
                 <tr><td colSpan={5} className="text-center py-8 text-gray-400">No hay turnos para esta fecha</td></tr>
-              ) : turnos.map(t => (
+              ) : turnos.map(t => {
+                const pasado = esPasado(t.fecha, t.hora);
+                const cerrado = ["Realizado", "Ausente", "Cancelado"].includes(t.estado);
+                const requiereAccion = pasado && !cerrado;
+                const rowClass = requiereAccion
+                  ? "bg-amber-50 hover:bg-amber-100 transition-colors"
+                  : cerrado && pasado
+                    ? "opacity-60 hover:opacity-100 transition-opacity"
+                    : "hover:bg-gray-50 transition-colors";
+                return (
                 <>
-                  <tr key={t.id_turno} className="hover:bg-gray-50 transition-colors">
+                  <tr key={t.id_turno} className={rowClass}>
                     <td className="table-cell font-mono">{t.hora}</td>
                     <td className="table-cell">{t.nombre_paciente}</td>
                     <td className="table-cell">{calcularEdad(t.fecha_nacimiento)}</td>
-                    <td className="table-cell">{estadoBadge(t.estado ?? "Pendiente")}</td>
+                    <td className="table-cell">
+                      <div className="flex flex-col gap-0.5 items-start">
+                        {estadoBadge(t.estado ?? "Pendiente")}
+                        {requiereAccion && <span className="text-[10px] text-amber-600 font-medium">Requiere cierre</span>}
+                      </div>
+                    </td>
                     <td className="table-cell">
                       <div className="flex gap-2 items-center flex-wrap">
                         <button
@@ -153,7 +174,25 @@ function TurnosProgramados() {
                         >
                           {t.nota_medico ? "Editar nota" : "Agregar nota"}
                         </button>
-                        {t.estado !== "Confirmado" && t.estado !== "Cancelado" && (
+                        {pasado && !cerrado && (
+                          <>
+                            <button
+                              onClick={() => cambiarEstado(t.id_turno, "Realizado")}
+                              disabled={cambiando === t.id_turno}
+                              className="text-xs text-teal-700 font-medium hover:underline disabled:opacity-50"
+                            >
+                              Realizado
+                            </button>
+                            <button
+                              onClick={() => cambiarEstado(t.id_turno, "Ausente")}
+                              disabled={cambiando === t.id_turno}
+                              className="text-xs text-orange-600 font-medium hover:underline disabled:opacity-50"
+                            >
+                              Ausente
+                            </button>
+                          </>
+                        )}
+                        {!pasado && t.estado !== "Confirmado" && t.estado !== "Cancelado" && (
                           <button
                             onClick={() => cambiarEstado(t.id_turno, "Confirmado")}
                             disabled={cambiando === t.id_turno}
@@ -162,7 +201,7 @@ function TurnosProgramados() {
                             Confirmar
                           </button>
                         )}
-                        {t.estado !== "Cancelado" && (
+                        {!pasado && t.estado !== "Cancelado" && (
                           <button
                             onClick={() => cambiarEstado(t.id_turno, "Cancelado")}
                             disabled={cambiando === t.id_turno}
@@ -215,7 +254,7 @@ function TurnosProgramados() {
                     </tr>
                   )}
                 </>
-              ))}
+              ); })}
             </tbody>
           </table>
         </div>

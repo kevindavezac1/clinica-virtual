@@ -6,7 +6,7 @@ import { sanitizeString, sanitizeEmail } from "@/lib/sanitize";
 import { encrypt, decrypt, hmacHex } from "@/lib/crypto";
 import bcrypt from "bcryptjs";
 
-const ROLES_VALIDOS = ["Paciente", "Medico", "Operador", "Admin"];
+const ROLES_VALIDOS = ["Paciente", "Medico", "Operador", "Administrador"];
 
 function decryptUsuario<T extends { dni: string; telefono: string; dni_hash?: string | null }>(u: T) {
   return { ...u, dni: decrypt(u.dni) ?? "", telefono: decrypt(u.telefono) ?? "" };
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     const telefonoRaw = sanitizeString(body.telefono, 20);
     const { fecha_nacimiento, password, id_cobertura, id_especialidad } = body;
 
-    const rol: string = callerRol === "Admin" ? (body.rol ?? "Paciente") : "Paciente";
+    const rol: string = callerRol === "Administrador" ? (body.rol ?? "Paciente") : "Paciente";
 
     if (!dniRaw || !apellido || !nombre || !email) {
       return NextResponse.json({ error: "Faltan campos requeridos o email inválido" }, { status: 400 });

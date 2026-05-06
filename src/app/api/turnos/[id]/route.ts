@@ -26,9 +26,27 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     const { estado } = body;
-    const estadosValidos = ["Pendiente", "Confirmado", "Cancelado"];
+    const estadosValidos = ["Pendiente", "Confirmado", "Cancelado", "Realizado", "Ausente"];
     if (!estadosValidos.includes(estado)) {
       return NextResponse.json({ error: "Estado no válido" }, { status: 400 });
+    }
+
+    // Solo médico o admin pueden marcar Realizado/Ausente, y el turno debe haber pasado
+    if (estado === "Realizado" || estado === "Ausente") {
+      if (jwtPayload.rol !== "Medico" && jwtPayload.rol !== "Administrador") {
+        return NextResponse.json({ error: "Solo el médico puede marcar este estado" }, { status: 403 });
+      }
+      const turnoExistente = await prisma.turno.findUnique({
+        where: { id: Number(id) },
+        select: { fecha: true, hora: true },
+      });
+      if (turnoExistente) {
+        const turnoDateTime = new Date(`${turnoExistente.fecha.toISOString().split("T")[0]}T${turnoExistente.hora.padStart(5, "0")}:00-03:00`);
+        const ahoraAR = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" }));
+        if (turnoDateTime > ahoraAR) {
+          return NextResponse.json({ error: "Solo podés marcar como Realizado o Ausente turnos que ya pasaron" }, { status: 400 });
+        }
+      }
     }
 
     // Pacientes solo pueden cancelar con +24hs de anticipación

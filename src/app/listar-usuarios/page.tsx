@@ -57,6 +57,8 @@ function ListarUsuarios() {
 
   const guardarEdicion = async () => {
     if (!editando) return;
+    if (editando.dni.length < 7) { toast("El DNI debe tener entre 7 y 8 dígitos", "error"); return; }
+    if (editando.telefono.length < 10) { toast("El teléfono debe tener 10 dígitos sin 0 ni 15 (ej: 3496500494)", "error"); return; }
     const res = await fetch(`/api/usuarios/${editando.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: token! },
@@ -162,8 +164,21 @@ function ListarUsuarios() {
                         : (editando as unknown as Record<string, string>)[key] || ""
                     }
                     max={type === "date" ? new Date().toISOString().split("T")[0] : undefined}
-                    onChange={e => setEditando(ed => ({ ...ed!, [key]: e.target.value }))}
+                    inputMode={key === "dni" || key === "telefono" ? "numeric" : undefined}
+                    maxLength={key === "dni" ? 8 : key === "telefono" ? 10 : undefined}
+                    onChange={e => {
+                      let val = e.target.value;
+                      if (key === "dni") val = val.replace(/\D/g, "").slice(0, 8);
+                      if (key === "telefono") val = val.replace(/\D/g, "").slice(0, 10);
+                      setEditando(ed => ({ ...ed!, [key]: val }));
+                    }}
                   />
+                  {key === "telefono" && (
+                    <p className="text-xs text-gray-400 mt-1">Sin 0 ni 15 (ej: 3496500494)</p>
+                  )}
+                  {key === "dni" && (
+                    <p className="text-xs text-gray-400 mt-1">7 u 8 dígitos</p>
+                  )}
                 </div>
               ))}
               <div>

@@ -38,7 +38,7 @@ function CrearUsuario() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     let value = e.target.value;
     if (e.target.name === "dni") value = value.replace(/\D/g, "").slice(0, 8);
-    if (e.target.name === "telefono") value = value.replace(/\D/g, "").slice(0, 15);
+    if (e.target.name === "telefono") value = value.replace(/\D/g, "").slice(0, 10);
     if (e.target.name === "nombre" || e.target.name === "apellido") value = value.replace(/[0-9]/g, "");
     setForm(f => ({ ...f, [e.target.name]: value }));
     if (fieldErrors[e.target.name]) setFieldErrors(f => ({ ...f, [e.target.name]: "" }));
@@ -118,7 +118,7 @@ function CrearUsuario() {
           </div>
           <div>
             <label className="label-field">Teléfono</label>
-            <input name="telefono" className="input-field" value={form.telefono} onChange={handleChange} onBlur={handleBlur} inputMode="numeric" placeholder="Ej: 3496500494" required />
+            <input name="telefono" className="input-field" value={form.telefono} onChange={handleChange} onBlur={handleBlur} inputMode="numeric" placeholder="Ej: 3496500494" maxLength={10} required />
             {fe("telefono")}
           </div>
           <div className="col-span-2">

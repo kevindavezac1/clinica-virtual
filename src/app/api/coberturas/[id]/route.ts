@@ -5,7 +5,7 @@ import { validateRequest, AuthError } from "@/lib/auth";
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const payload = await validateRequest(req);
-    if (payload.rol !== "admin") {
+    if (payload.rol !== "Administrador") {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
     const { id } = await params;
@@ -26,7 +26,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const payload = await validateRequest(req);
-    if (payload.rol !== "admin") {
+    if (payload.rol !== "Administrador") {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
     const { id } = await params;

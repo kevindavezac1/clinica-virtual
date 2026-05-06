@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendRecordatorio } from "@/lib/email";
 import { sendRecordatorioWhatsApp } from "@/lib/whatsapp";
+import { decrypt } from "@/lib/crypto";
 
 function formatFecha(fecha: Date): string {
   return fecha.toLocaleDateString("es-AR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
@@ -50,9 +51,10 @@ export async function GET(req: NextRequest) {
 
       await sendRecordatorio(turno.paciente.email, paciente, fecha, turno.hora, medico, especialidad);
 
-      if (turno.paciente.telefono) {
+      const telefonoDecriptado = decrypt(turno.paciente.telefono);
+      if (telefonoDecriptado) {
         try {
-          await sendRecordatorioWhatsApp(turno.paciente.telefono, paciente, fecha, turno.hora, medico, especialidad);
+          await sendRecordatorioWhatsApp(telefonoDecriptado, paciente, fecha, turno.hora, medico, especialidad);
         } catch (wErr) {
           console.error(`[cron/recordatorio] WhatsApp error turno ${turno.id}:`, wErr);
         }

@@ -41,7 +41,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const jwtPayload = await validateRequest(req);
     const { id } = await params;
-    const isAdmin = jwtPayload.rol === "Admin";
+    const isAdmin = jwtPayload.rol === "Administrador";
     const isSelf = String(jwtPayload.id) === id;
 
     if (!isAdmin && !isSelf) {
