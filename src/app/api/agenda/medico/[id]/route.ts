@@ -4,8 +4,8 @@ import { validateRequest, AuthError } from "@/lib/auth";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const payload = await validateRequest(req);
-    if (payload.rol !== "Medico" && payload.rol !== "Operador" && payload.rol !== "Administrador") {
+    const jwtPayload = await validateRequest(req);
+    if (jwtPayload.rol !== "Medico" && jwtPayload.rol !== "Operador" && jwtPayload.rol !== "Administrador") {
       return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
     }
     const { id } = await params;

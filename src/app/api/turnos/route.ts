@@ -12,8 +12,8 @@ function formatFecha(fecha: Date): string {
 
 export async function GET(req: NextRequest) {
   try {
-    const payload = await validateRequest(req);
-    if (payload.rol !== "Medico" && payload.rol !== "Operador" && payload.rol !== "Administrador") {
+    const jwtPayload = await validateRequest(req);
+    if (jwtPayload.rol !== "Medico" && jwtPayload.rol !== "Operador" && jwtPayload.rol !== "Administrador") {
       return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
     }
     const fecha = req.nextUrl.searchParams.get("fecha");
@@ -60,8 +60,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const payload = await validateRequest(req);
-    if (payload.rol !== "Paciente" && payload.rol !== "Operador" && payload.rol !== "Administrador") {
+    const jwtPayload = await validateRequest(req);
+    if (jwtPayload.rol !== "Paciente" && jwtPayload.rol !== "Operador" && jwtPayload.rol !== "Administrador") {
       return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
     }
     const body = await req.json();

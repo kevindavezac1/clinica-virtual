@@ -5,8 +5,8 @@ import { decrypt } from "@/lib/crypto";
 
 export async function POST(req: NextRequest) {
   try {
-    const payload = await validateRequest(req);
-    if (payload.rol !== "Medico" && payload.rol !== "Operador" && payload.rol !== "Administrador") {
+    const jwtPayload = await validateRequest(req);
+    if (jwtPayload.rol !== "Medico" && jwtPayload.rol !== "Operador" && jwtPayload.rol !== "Administrador") {
       return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
     }
     const { id_medico, fecha } = await req.json();
