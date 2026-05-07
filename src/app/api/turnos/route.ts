@@ -19,8 +19,17 @@ export async function GET(req: NextRequest) {
     const fecha = req.nextUrl.searchParams.get("fecha");
     if (!fecha) return NextResponse.json({ error: "Falta el parámetro fecha" }, { status: 400 });
 
+    const idMedico = req.nextUrl.searchParams.get("id_medico");
+    const idEspecialidad = req.nextUrl.searchParams.get("id_especialidad");
+    const agendaFilter: Record<string, number> = {};
+    if (idMedico) agendaFilter.id_medico = Number(idMedico);
+    if (idEspecialidad) agendaFilter.id_especialidad = Number(idEspecialidad);
+
     const turnos = await prisma.turno.findMany({
-      where: { fecha: new Date(fecha) },
+      where: {
+        fecha: new Date(fecha),
+        ...(Object.keys(agendaFilter).length > 0 ? { agenda: agendaFilter } : {}),
+      },
       select: {
         id: true,
         hora: true,

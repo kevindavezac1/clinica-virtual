@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Link from "next/link";
@@ -15,6 +15,28 @@ interface Turno {
   fecha: string;
   estado: string;
   cobertura: string;
+}
+
+const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+
+function getMonday(dateStr: string): Date {
+  const d = new Date(dateStr + "T12:00:00");
+  const day = d.getDay();
+  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function toDateStr(d: Date): string {
+  return d.toLocaleDateString("en-CA");
+}
+
+function weekLabel(monday: Date): string {
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const m = monday.toLocaleDateString("es-AR", { day: "numeric", month: "long" });
+  const s = sunday.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
+  return `${m} – ${s}`;
 }
 
 function calcularEdad(fechaNac: string): number {
@@ -55,7 +77,13 @@ export default function TurnosProgramadosPage() {
 
 function TurnosProgramados() {
   const { user, token } = useAuth();
-  const [fecha, setFecha] = useState(new Date().toISOString().split("T")[0]);
+  const [todayStr] = useState(() =>
+    new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
+  );
+  const [fecha, setFecha] = useState(todayStr);
+  const [weekStart, setWeekStart] = useState(() => getMonday(todayStr));
+  const [counts, setCounts] = useState<Record<string, number | undefined>>({});
+  const [closurePending, setClosurePending] = useState<Record<string, boolean>>({});
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [selected, setSelected] = useState<Turno | null>(null);
   const [loading, setLoading] = useState(false);
@@ -63,8 +91,15 @@ function TurnosProgramados() {
   const [editandoNota, setEditandoNota] = useState<number | null>(null);
   const [notaTexto, setNotaTexto] = useState("");
   const [guardandoNota, setGuardandoNota] = useState(false);
+  const [mostrarCancelados, setMostrarCancelados] = useState(false);
 
-  const cargar = async (f: string) => {
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    return d;
+  });
+
+  const cargar = useCallback(async (f: string) => {
     if (!user) return;
     setLoading(true);
     const res = await fetch("/api/turnos/medico", {
@@ -83,9 +118,61 @@ function TurnosProgramados() {
       setTurnos(sorted);
     }
     setLoading(false);
+  }, [user, token]);
+
+  const fetchWeekCounts = useCallback(async (monday: Date) => {
+    if (!user) return;
+    setCounts({});
+    setClosurePending({});
+    const now = new Date();
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      return d;
+    });
+    const results = await Promise.all(
+      days.map(d =>
+        fetch("/api/turnos/medico", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: token! },
+          body: JSON.stringify({ id_medico: user.id, fecha: toDateStr(d) }),
+        })
+          .then(r => r.json())
+          .then(data => {
+            const payload: { fecha: string; hora: string; estado: string }[] = data.payload ?? [];
+            const count = payload.filter(t => t.estado !== "Cancelado").length;
+            const needsClosure = payload.some(t => {
+              if (["Realizado", "Ausente", "Cancelado"].includes(t.estado)) return false;
+              const dt = new Date(`${t.fecha.split("T")[0]}T${t.hora.padStart(5, "0")}:00-03:00`);
+              return dt < now;
+            });
+            return { date: toDateStr(d), count, needsClosure };
+          })
+      )
+    );
+    const countMap: Record<string, number> = {};
+    const closureMap: Record<string, boolean> = {};
+    results.forEach(r => { countMap[r.date] = r.count; closureMap[r.date] = r.needsClosure; });
+    setCounts(countMap);
+    setClosurePending(closureMap);
+  }, [user, token]);
+
+  useEffect(() => { cargar(fecha); }, [fecha, cargar]);
+  useEffect(() => { if (user) fetchWeekCounts(weekStart); }, [weekStart, user, fetchWeekCounts]);
+
+  const prevWeek = () => {
+    const d = new Date(weekStart);
+    d.setDate(d.getDate() - 7);
+    setWeekStart(d);
+    setFecha(toDateStr(d));
   };
 
-  useEffect(() => { cargar(fecha); }, [user, fecha]);
+  const nextWeek = () => {
+    const d = new Date(weekStart);
+    d.setDate(d.getDate() + 7);
+    setWeekStart(d);
+    setFecha(toDateStr(d));
+  };
 
   const abrirNota = (t: Turno) => {
     setEditandoNota(t.id_turno);
@@ -115,15 +202,80 @@ function TurnosProgramados() {
     setCambiando(null);
     setSelected(null);
     cargar(fecha);
+    fetchWeekCounts(weekStart);
   };
+
+  const diaSeleccionado = weekDays.find(d => toDateStr(d) === fecha);
+  const labelDia = diaSeleccionado
+    ? diaSeleccionado.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })
+    : fecha;
 
   return (
     <div className="max-w-3xl mx-auto">
       <h1 className="page-title">Turnos Programados</h1>
+
+      {/* Week navigation */}
       <div className="mb-6">
-        <label className="label-field">Seleccioná la fecha</label>
-        <input type="date" className="input-field max-w-xs" value={fecha} onChange={e => setFecha(e.target.value)} />
+        <div className="flex items-center gap-3 mb-3">
+          <button onClick={prevWeek} className="btn-secondary px-3 py-1.5 text-sm">← Anterior</button>
+          <span className="font-medium text-gray-700 capitalize">{weekLabel(weekStart)}</span>
+          <button onClick={nextWeek} className="btn-secondary px-3 py-1.5 text-sm">Siguiente →</button>
+        </div>
+        <div className="grid grid-cols-7 gap-2">
+          {weekDays.map((d, i) => {
+            const ds = toDateStr(d);
+            const isSelected = ds === fecha;
+            const isToday = ds === todayStr;
+            const count = counts[ds];
+            const hasClosure = closurePending[ds];
+            return (
+              <button
+                key={ds}
+                onClick={() => setFecha(ds)}
+                className={`relative rounded-xl p-2 text-center border transition-all ${
+                  isSelected
+                    ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                    : hasClosure
+                      ? "bg-amber-50 border-amber-400 text-amber-800 hover:bg-amber-100"
+                      : isToday
+                        ? "bg-blue-50 border-blue-300 text-blue-700"
+                        : "bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:bg-gray-50"
+                }`}
+              >
+                {hasClosure && !isSelected && (
+                  <span className="absolute top-1 right-1.5 w-1.5 h-1.5 rounded-full bg-amber-500" />
+                )}
+                <p className="text-xs font-medium">{DIAS[i]}</p>
+                <p className="text-lg font-bold leading-none mt-0.5">{d.getDate()}</p>
+                {count === undefined ? (
+                  <p className="text-xs mt-1 opacity-40">…</p>
+                ) : count > 0 ? (
+                  <p className={`text-xs mt-1 font-medium ${isSelected ? "text-blue-100" : hasClosure ? "text-amber-700" : "text-blue-600"}`}>
+                    {count} {count === 1 ? "turno" : "turnos"}
+                  </p>
+                ) : (
+                  <p className={`text-xs mt-1 ${isSelected ? "text-blue-300" : "text-gray-300"}`}>libre</p>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
+
+      {/* Day detail */}
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm font-medium text-gray-500 capitalize">{labelDia}</p>
+        <label className="flex items-center gap-1.5 text-sm text-gray-500 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={mostrarCancelados}
+            onChange={e => setMostrarCancelados(e.target.checked)}
+            className="rounded"
+          />
+          Ver cancelados
+        </label>
+      </div>
+
       {loading ? <p className="text-gray-500">Cargando...</p> : (
         <div className="overflow-x-auto rounded-xl shadow-sm border border-gray-100">
           <table className="w-full text-sm">
@@ -137,9 +289,9 @@ function TurnosProgramados() {
               </tr>
             </thead>
             <tbody>
-              {turnos.length === 0 ? (
+              {turnos.filter(t => mostrarCancelados || t.estado !== "Cancelado").length === 0 ? (
                 <tr><td colSpan={5} className="text-center py-8 text-gray-400">No hay turnos para esta fecha</td></tr>
-              ) : turnos.map(t => {
+              ) : turnos.filter(t => mostrarCancelados || t.estado !== "Cancelado").map(t => {
                 const pasado = esPasado(t.fecha, t.hora);
                 const cerrado = ["Realizado", "Ausente", "Cancelado"].includes(t.estado);
                 const requiereAccion = pasado && !cerrado;
@@ -149,112 +301,113 @@ function TurnosProgramados() {
                     ? "opacity-60 hover:opacity-100 transition-opacity"
                     : "hover:bg-gray-50 transition-colors";
                 return (
-                <>
-                  <tr key={t.id_turno} className={rowClass}>
-                    <td className="table-cell font-mono">{t.hora}</td>
-                    <td className="table-cell">{t.nombre_paciente}</td>
-                    <td className="table-cell">{calcularEdad(t.fecha_nacimiento)}</td>
-                    <td className="table-cell">
-                      <div className="flex flex-col gap-0.5 items-start">
-                        {estadoBadge(t.estado ?? "Pendiente")}
-                        {requiereAccion && <span className="text-[10px] text-amber-600 font-medium">Requiere cierre</span>}
-                      </div>
-                    </td>
-                    <td className="table-cell">
-                      <div className="flex gap-2 items-center flex-wrap">
-                        <button
-                          onClick={() => setSelected(selected?.id_turno === t.id_turno ? null : t)}
-                          className="text-blue-600 hover:underline text-xs"
-                        >
-                          {selected?.id_turno === t.id_turno ? "Ocultar" : "Ver notas"}
-                        </button>
-                        <button
-                          onClick={() => abrirNota(t)}
-                          className="text-indigo-600 hover:underline text-xs"
-                        >
-                          {t.nota_medico ? "Editar nota" : "Agregar nota"}
-                        </button>
-                        {pasado && !cerrado && (
-                          <>
-                            <button
-                              onClick={() => cambiarEstado(t.id_turno, "Realizado")}
-                              disabled={cambiando === t.id_turno}
-                              className="text-xs text-teal-700 font-medium hover:underline disabled:opacity-50"
-                            >
-                              Realizado
-                            </button>
-                            <button
-                              onClick={() => cambiarEstado(t.id_turno, "Ausente")}
-                              disabled={cambiando === t.id_turno}
-                              className="text-xs text-orange-600 font-medium hover:underline disabled:opacity-50"
-                            >
-                              Ausente
-                            </button>
-                          </>
-                        )}
-                        {!pasado && t.estado !== "Confirmado" && t.estado !== "Cancelado" && (
-                          <button
-                            onClick={() => cambiarEstado(t.id_turno, "Confirmado")}
-                            disabled={cambiando === t.id_turno}
-                            className="text-xs text-green-700 hover:underline disabled:opacity-50"
-                          >
-                            Confirmar
-                          </button>
-                        )}
-                        {!pasado && t.estado !== "Cancelado" && (
-                          <button
-                            onClick={() => cambiarEstado(t.id_turno, "Cancelado")}
-                            disabled={cambiando === t.id_turno}
-                            className="text-xs text-red-600 hover:underline disabled:opacity-50"
-                          >
-                            Cancelar
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                  {selected?.id_turno === t.id_turno && (
-                    <tr key={`nota-${t.id_turno}`}>
-                      <td colSpan={5} className="px-4 py-3 bg-blue-50 text-sm text-gray-700 border-b">
-                        <p><strong>Cobertura:</strong> {t.cobertura}</p>
-                        <p><strong>Motivo de consulta:</strong> {t.nota || "Sin notas del paciente."}</p>
-                        {t.nota_medico && (
-                          <p className="mt-1"><strong>Nota clínica:</strong> {t.nota_medico}</p>
-                        )}
+                  <>
+                    <tr key={t.id_turno} className={rowClass}>
+                      <td className="table-cell font-mono">{t.hora}</td>
+                      <td className="table-cell">{t.nombre_paciente}</td>
+                      <td className="table-cell">{calcularEdad(t.fecha_nacimiento)}</td>
+                      <td className="table-cell">
+                        <div className="flex flex-col gap-0.5 items-start">
+                          {estadoBadge(t.estado ?? "Pendiente")}
+                          {requiereAccion && <span className="text-[10px] text-amber-600 font-medium">Requiere cierre</span>}
+                        </div>
                       </td>
-                    </tr>
-                  )}
-                  {editandoNota === t.id_turno && (
-                    <tr key={`edit-nota-${t.id_turno}`}>
-                      <td colSpan={5} className="px-4 py-3 bg-indigo-50 border-b">
-                        <p className="text-xs font-semibold text-indigo-700 mb-2">Nota clínica — {t.nombre_paciente}</p>
-                        <textarea
-                          className="w-full border border-indigo-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"
-                          rows={4}
-                          placeholder="Diagnóstico, indicaciones, observaciones..."
-                          value={notaTexto}
-                          onChange={e => setNotaTexto(e.target.value)}
-                        />
-                        <div className="flex gap-2 mt-2">
+                      <td className="table-cell">
+                        <div className="flex gap-2 items-center flex-wrap">
                           <button
-                            onClick={() => guardarNota(t.id_turno)}
-                            disabled={guardandoNota}
-                            className="btn-primary text-xs px-4 py-1.5 disabled:opacity-50"
+                            onClick={() => setSelected(selected?.id_turno === t.id_turno ? null : t)}
+                            className="text-blue-600 hover:underline text-xs"
                           >
-                            {guardandoNota ? "Guardando..." : "Guardar nota"}
+                            {selected?.id_turno === t.id_turno ? "Ocultar" : "Ver notas"}
                           </button>
                           <button
-                            onClick={() => setEditandoNota(null)}
-                            className="btn-secondary text-xs px-4 py-1.5"
+                            onClick={() => abrirNota(t)}
+                            className="text-indigo-600 hover:underline text-xs"
                           >
-                            Cancelar
+                            {t.nota_medico ? "Editar nota" : "Agregar nota"}
                           </button>
+                          {pasado && !cerrado && (
+                            <>
+                              <button
+                                onClick={() => cambiarEstado(t.id_turno, "Realizado")}
+                                disabled={cambiando === t.id_turno}
+                                className="text-xs text-teal-700 font-medium hover:underline disabled:opacity-50"
+                              >
+                                Realizado
+                              </button>
+                              <button
+                                onClick={() => cambiarEstado(t.id_turno, "Ausente")}
+                                disabled={cambiando === t.id_turno}
+                                className="text-xs text-orange-600 font-medium hover:underline disabled:opacity-50"
+                              >
+                                Ausente
+                              </button>
+                            </>
+                          )}
+                          {!pasado && t.estado !== "Confirmado" && t.estado !== "Cancelado" && (
+                            <button
+                              onClick={() => cambiarEstado(t.id_turno, "Confirmado")}
+                              disabled={cambiando === t.id_turno}
+                              className="text-xs text-green-700 hover:underline disabled:opacity-50"
+                            >
+                              Confirmar
+                            </button>
+                          )}
+                          {!pasado && t.estado !== "Cancelado" && (
+                            <button
+                              onClick={() => cambiarEstado(t.id_turno, "Cancelado")}
+                              disabled={cambiando === t.id_turno}
+                              className="text-xs text-red-600 hover:underline disabled:opacity-50"
+                            >
+                              Cancelar
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
-                  )}
-                </>
-              ); })}
+                    {selected?.id_turno === t.id_turno && (
+                      <tr key={`nota-${t.id_turno}`}>
+                        <td colSpan={5} className="px-4 py-3 bg-blue-50 text-sm text-gray-700 border-b">
+                          <p><strong>Cobertura:</strong> {t.cobertura}</p>
+                          <p><strong>Motivo de consulta:</strong> {t.nota || "Sin notas del paciente."}</p>
+                          {t.nota_medico && (
+                            <p className="mt-1"><strong>Nota clínica:</strong> {t.nota_medico}</p>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                    {editandoNota === t.id_turno && (
+                      <tr key={`edit-nota-${t.id_turno}`}>
+                        <td colSpan={5} className="px-4 py-3 bg-indigo-50 border-b">
+                          <p className="text-xs font-semibold text-indigo-700 mb-2">Nota clínica — {t.nombre_paciente}</p>
+                          <textarea
+                            className="w-full border border-indigo-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"
+                            rows={4}
+                            placeholder="Diagnóstico, indicaciones, observaciones..."
+                            value={notaTexto}
+                            onChange={e => setNotaTexto(e.target.value)}
+                          />
+                          <div className="flex gap-2 mt-2">
+                            <button
+                              onClick={() => guardarNota(t.id_turno)}
+                              disabled={guardandoNota}
+                              className="btn-primary text-xs px-4 py-1.5 disabled:opacity-50"
+                            >
+                              {guardandoNota ? "Guardando..." : "Guardar nota"}
+                            </button>
+                            <button
+                              onClick={() => setEditandoNota(null)}
+                              className="btn-secondary text-xs px-4 py-1.5"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                );
+              })}
             </tbody>
           </table>
         </div>

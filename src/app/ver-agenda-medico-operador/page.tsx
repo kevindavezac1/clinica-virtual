@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 
@@ -13,6 +13,39 @@ interface Turno {
   nombre_medico: string;
   especialidad: string;
   cobertura: string;
+}
+
+interface MedicoOption {
+  id: number;
+  nombre: string;
+  apellido: string;
+}
+
+interface EspecialidadOption {
+  id: number;
+  descripcion: string;
+}
+
+const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+
+function getMonday(dateStr: string): Date {
+  const d = new Date(dateStr + "T12:00:00");
+  const day = d.getDay();
+  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day));
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function toDateStr(d: Date): string {
+  return d.toLocaleDateString("en-CA");
+}
+
+function weekLabel(monday: Date): string {
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const m = monday.toLocaleDateString("es-AR", { day: "numeric", month: "long" });
+  const s = sunday.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
+  return `${m} – ${s}`;
 }
 
 function estadoBadge(estado: string) {
@@ -40,42 +73,121 @@ export default function VerAgendaOperadorPage() {
 
 function VerAgendaOperador() {
   const { token } = useAuth();
-  const [fecha, setFecha] = useState(new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" }));
+  const [todayStr] = useState(() =>
+    new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" })
+  );
+  const [fecha, setFecha] = useState(todayStr);
+  const [weekStart, setWeekStart] = useState(() => getMonday(todayStr));
+  const [counts, setCounts] = useState<Record<string, number | undefined>>({});
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Filtros globales (afectan semana + tabla)
+  const [filtroMedicoId, setFiltroMedicoId] = useState<string>("");
+  const [filtroEspecialidadId, setFiltroEspecialidadId] = useState<string>("");
+  const [listaMedicos, setListaMedicos] = useState<MedicoOption[]>([]);
+  const [listaEspecialidades, setListaEspecialidades] = useState<EspecialidadOption[]>([]);
+
+  // Filtros locales (solo afectan tabla del día)
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("");
-  const [filtroMedico, setFiltroMedico] = useState("");
-  const [medicos, setMedicos] = useState<string[]>([]);
+  const [mostrarCancelados, setMostrarCancelados] = useState(false);
+
   const [cancelando, setCancelando] = useState<number | null>(null);
   const [confirmando, setConfirmando] = useState<number | null>(null);
 
-  const cargar = async (f: string) => {
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    return d;
+  });
+
+  // Fetch listas de médicos y especialidades al montar
+  useEffect(() => {
+    fetch("/api/especialidades", { headers: { Authorization: token! } })
+      .then(r => r.json())
+      .then(d => setListaEspecialidades(d.payload ?? []));
+    fetch("/api/usuarios?rol=Medico", { headers: { Authorization: token! } })
+      .then(r => r.json())
+      .then(d => setListaMedicos((d.payload ?? []).sort((a: MedicoOption, b: MedicoOption) =>
+        a.apellido.localeCompare(b.apellido)
+      )));
+  }, [token]);
+
+  // Cuando cambia filtro global → limpiar filtros locales de la tabla
+  useEffect(() => {
+    setBusqueda("");
+    setFiltroEstado("");
+    setMostrarCancelados(false);
+  }, [filtroMedicoId, filtroEspecialidadId]);
+
+  const buildParams = useCallback((f: string) => {
+    const params = new URLSearchParams({ fecha: f });
+    if (filtroMedicoId) params.set("id_medico", filtroMedicoId);
+    if (filtroEspecialidadId) params.set("id_especialidad", filtroEspecialidadId);
+    return params.toString();
+  }, [filtroMedicoId, filtroEspecialidadId]);
+
+  const cargar = useCallback(async (f: string) => {
     setLoading(true);
     setTurnos([]);
-    const res = await fetch(`/api/turnos?fecha=${f}`, {
+    const res = await fetch(`/api/turnos?${buildParams(f)}`, {
       headers: { Authorization: token! },
     }).then(r => r.json());
     if (res.payload) {
       const data: Turno[] = res.payload.map((t: Turno) => ({ ...t, hora: t.hora.padStart(5, "0") }));
       setTurnos(data);
-      const medicosUnicos = [...new Set(data.map(t => t.nombre_medico))].sort();
-      setMedicos(medicosUnicos);
     }
     setLoading(false);
+  }, [token, buildParams]);
+
+  const fetchWeekCounts = useCallback(async (monday: Date) => {
+    setCounts({});
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      return d;
+    });
+    const results = await Promise.all(
+      days.map(d =>
+        fetch(`/api/turnos?${buildParams(toDateStr(d))}`, { headers: { Authorization: token! } })
+          .then(r => r.json())
+          .then(data => ({
+            date: toDateStr(d),
+            count: (data.payload?.filter((t: { estado: string }) => t.estado !== "Cancelado").length ?? 0) as number,
+          }))
+      )
+    );
+    const map: Record<string, number> = {};
+    results.forEach(r => { map[r.date] = r.count; });
+    setCounts(map);
+  }, [token, buildParams]);
+
+  useEffect(() => { cargar(fecha); }, [fecha, cargar]);
+  useEffect(() => { fetchWeekCounts(weekStart); }, [weekStart, fetchWeekCounts]);
+
+  const prevWeek = () => {
+    const d = new Date(weekStart);
+    d.setDate(d.getDate() - 7);
+    setWeekStart(d);
+    setFecha(toDateStr(d));
   };
 
-  useEffect(() => { cargar(fecha); }, [token, fecha]);
+  const nextWeek = () => {
+    const d = new Date(weekStart);
+    d.setDate(d.getDate() + 7);
+    setWeekStart(d);
+    setFecha(toDateStr(d));
+  };
 
   const filtrados = turnos.filter(t => {
+    if (!mostrarCancelados && t.estado === "Cancelado") return false;
     const q = busqueda.toLowerCase();
     const coincideBusqueda = !q ||
       t.nombre_paciente.toLowerCase().includes(q) ||
       t.nombre_medico.toLowerCase().includes(q) ||
       t.especialidad.toLowerCase().includes(q);
-    const coincideEstado = !filtroEstado || t.estado === filtroEstado;
-    const coincideMedico = !filtroMedico || t.nombre_medico === filtroMedico;
-    return coincideBusqueda && coincideEstado && coincideMedico;
+    return coincideBusqueda && (!filtroEstado || t.estado === filtroEstado);
   });
 
   const cambiarEstado = async (id: number, estado: string) => {
@@ -89,23 +201,105 @@ function VerAgendaOperador() {
     setCancelando(null);
     setConfirmando(null);
     cargar(fecha);
+    fetchWeekCounts(weekStart);
   };
 
-  const limpiar = () => { setBusqueda(""); setFiltroEstado(""); setFiltroMedico(""); };
-  const hayFiltros = busqueda || filtroEstado || filtroMedico;
+  const limpiarFiltros = () => {
+    setFiltroMedicoId("");
+    setFiltroEspecialidadId("");
+    setBusqueda("");
+    setFiltroEstado("");
+    setMostrarCancelados(false);
+  };
+  const hayFiltros = filtroMedicoId || filtroEspecialidadId || busqueda || filtroEstado || mostrarCancelados;
+
+  const diaSeleccionado = weekDays.find(d => toDateStr(d) === fecha);
+  const labelDia = diaSeleccionado
+    ? diaSeleccionado.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })
+    : fecha;
 
   return (
     <div className="max-w-5xl mx-auto">
       <h1 className="page-title">Gestión de Turnos</h1>
 
-      <div className="mb-5 flex flex-wrap gap-3 items-center">
+      {/* Filtros globales */}
+      <div className="card mb-4 flex flex-wrap gap-3 items-end">
         <div>
-          <label className="label-field">Fecha</label>
-          <input type="date" className="input-field max-w-xs" value={fecha} onChange={e => setFecha(e.target.value)} />
+          <label className="label-field">Médico</label>
+          <select
+            className="select-field min-w-[200px]"
+            value={filtroMedicoId}
+            onChange={e => setFiltroMedicoId(e.target.value)}
+          >
+            <option value="">Todos los médicos</option>
+            {listaMedicos.map(m => (
+              <option key={m.id} value={m.id}>{m.apellido}, {m.nombre}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="label-field">Especialidad</label>
+          <select
+            className="select-field min-w-[180px]"
+            value={filtroEspecialidadId}
+            onChange={e => setFiltroEspecialidadId(e.target.value)}
+          >
+            <option value="">Todas las especialidades</option>
+            {listaEspecialidades.map(e => (
+              <option key={e.id} value={e.id}>{e.descripcion}</option>
+            ))}
+          </select>
+        </div>
+        {hayFiltros && (
+          <button onClick={limpiarFiltros} className="btn-secondary">Limpiar filtros</button>
+        )}
+      </div>
+
+      {/* Navegación semanal */}
+      <div className="mb-6">
+        <div className="flex items-center gap-3 mb-3">
+          <button onClick={prevWeek} className="btn-secondary px-3 py-1.5 text-sm">← Anterior</button>
+          <span className="font-medium text-gray-700 capitalize">{weekLabel(weekStart)}</span>
+          <button onClick={nextWeek} className="btn-secondary px-3 py-1.5 text-sm">Siguiente →</button>
+        </div>
+        <div className="grid grid-cols-7 gap-2">
+          {weekDays.map((d, i) => {
+            const ds = toDateStr(d);
+            const isSelected = ds === fecha;
+            const isToday = ds === todayStr;
+            const count = counts[ds];
+            return (
+              <button
+                key={ds}
+                onClick={() => setFecha(ds)}
+                className={`rounded-xl p-2 text-center border transition-all ${
+                  isSelected
+                    ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                    : isToday
+                      ? "bg-blue-50 border-blue-300 text-blue-700"
+                      : "bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:bg-gray-50"
+                }`}
+              >
+                <p className="text-xs font-medium">{DIAS[i]}</p>
+                <p className="text-lg font-bold leading-none mt-0.5">{d.getDate()}</p>
+                {count === undefined ? (
+                  <p className="text-xs mt-1 opacity-40">…</p>
+                ) : count > 0 ? (
+                  <p className={`text-xs mt-1 font-medium ${isSelected ? "text-blue-100" : "text-blue-600"}`}>
+                    {count} {count === 1 ? "turno" : "turnos"}
+                  </p>
+                ) : (
+                  <p className={`text-xs mt-1 ${isSelected ? "text-blue-300" : "text-gray-300"}`}>libre</p>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
+      {/* Búsqueda y estado dentro del día */}
       <div className="card mb-5 flex flex-wrap gap-3 items-center">
+        <span className="text-sm font-medium text-gray-500 capitalize">{labelDia}</span>
         <input
           className="input-field flex-1 min-w-[200px]"
           placeholder="Buscar paciente, médico o especialidad..."
@@ -114,13 +308,19 @@ function VerAgendaOperador() {
         />
         <select className="select-field max-w-[180px]" value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
           <option value="">Todos los estados</option>
-          {["Pendiente", "Confirmado", "Cancelado", "Realizado", "Ausente"].map(e => <option key={e} value={e}>{e}</option>)}
+          {["Pendiente", "Confirmado", "Realizado", "Ausente", ...(mostrarCancelados ? ["Cancelado"] : [])].map(e => (
+            <option key={e} value={e}>{e}</option>
+          ))}
         </select>
-        <select className="select-field max-w-[200px]" value={filtroMedico} onChange={e => setFiltroMedico(e.target.value)}>
-          <option value="">Todos los médicos</option>
-          {medicos.map(m => <option key={m} value={m}>{m}</option>)}
-        </select>
-        {hayFiltros && <button onClick={limpiar} className="btn-secondary whitespace-nowrap">Limpiar</button>}
+        <label className="flex items-center gap-1.5 text-sm text-gray-500 cursor-pointer whitespace-nowrap">
+          <input
+            type="checkbox"
+            checked={mostrarCancelados}
+            onChange={e => { setMostrarCancelados(e.target.checked); setFiltroEstado(""); }}
+            className="rounded"
+          />
+          Ver cancelados
+        </label>
         <span className="text-sm text-gray-400 whitespace-nowrap">{filtrados.length} turno{filtrados.length !== 1 ? "s" : ""}</span>
       </div>
 
