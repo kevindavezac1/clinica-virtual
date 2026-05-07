@@ -5,7 +5,10 @@ import { decrypt } from "@/lib/crypto";
 
 export async function POST(req: NextRequest) {
   try {
-    await validateRequest(req);
+    const payload = await validateRequest(req);
+    if (payload.rol !== "Medico" && payload.rol !== "Operador" && payload.rol !== "Administrador") {
+      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+    }
     const { id_medico, fecha } = await req.json();
 
     const turnos = await prisma.turno.findMany({

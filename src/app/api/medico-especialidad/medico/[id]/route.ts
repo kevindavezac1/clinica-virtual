@@ -32,7 +32,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function POST(req: NextRequest) {
   try {
-    await validateRequest(req);
+    const payload = await validateRequest(req);
+    if (payload.rol !== "Administrador") {
+      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+    }
     const { id_medico, id_especialidad } = await req.json();
     await prisma.medicoEspecialidad.create({ data: { id_medico, id_especialidad } });
     return NextResponse.json({ codigo: 200, mensaje: "OK", payload: [] });

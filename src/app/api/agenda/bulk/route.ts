@@ -13,7 +13,10 @@ interface EntradaAgenda {
 
 export async function POST(req: NextRequest) {
   try {
-    await validateRequest(req);
+    const payload = await validateRequest(req);
+    if (payload.rol !== "Medico" && payload.rol !== "Administrador") {
+      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+    }
     const { entries } = await req.json() as { entries: EntradaAgenda[] };
     if (!entries?.length) {
       return NextResponse.json({ error: "No se enviaron entradas" }, { status: 400 });

@@ -5,8 +5,14 @@ import { decrypt } from "@/lib/crypto";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await validateRequest(req);
+    const jwtPayload = await validateRequest(req);
     const { id } = await params;
+    if (jwtPayload.rol === "Paciente" && Number(jwtPayload.id) !== Number(id)) {
+      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+    }
+    if (jwtPayload.rol !== "Paciente" && jwtPayload.rol !== "Medico" && jwtPayload.rol !== "Operador" && jwtPayload.rol !== "Administrador") {
+      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+    }
 
     const turnos = await prisma.turno.findMany({
       where: { id_paciente: Number(id) },

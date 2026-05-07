@@ -21,6 +21,24 @@ function wrap(content: string): string {
   `;
 }
 
+export async function sendEmailVerification(to: string, nombre: string, token: string) {
+  const verifyUrl = `${BASE_URL}/verify-email?token=${token}`;
+  await transporter.sendMail({
+    from: FROM,
+    to,
+    subject: "Verificá tu email — Consultorios Esperanza",
+    html: wrap(`
+      <h2 style="color:#1e3a5f;margin-top:0">Verificá tu email</h2>
+      <p>Hola <strong>${nombre}</strong>,</p>
+      <p>Gracias por registrarte. Para activar tu cuenta hacé clic en el botón:</p>
+      <a href="${verifyUrl}" style="display:inline-block;margin:24px 0;padding:12px 28px;background:#1e3a5f;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px">
+        Verificar email
+      </a>
+      <p style="color:#666;font-size:14px">El enlace expira en <strong>24 horas</strong>. Si no creaste esta cuenta, ignorá este email.</p>
+    `),
+  });
+}
+
 export async function sendPasswordReset(to: string, nombre: string, token: string) {
   const resetUrl = `${BASE_URL}/reset-password?token=${token}`;
   await transporter.sendMail({

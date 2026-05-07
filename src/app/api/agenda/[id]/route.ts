@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateRequest, AuthError } from "@/lib/auth";
 
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const payload = await validateRequest(req);
+    if (payload.rol !== "Medico" && payload.rol !== "Administrador") {
+      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+    }
     const { id } = await params;
     const turnosActivos = await prisma.turno.count({
       where: { id_agenda: Number(id), estado: { not: "Cancelado" } },
@@ -27,7 +31,10 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await validateRequest(req);
+    const payload = await validateRequest(req);
+    if (payload.rol !== "Medico" && payload.rol !== "Administrador") {
+      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+    }
     const { id } = await params;
     const { id_medico, id_especialidad, fecha, hora_entrada, hora_salida, duracion = 30 } = await req.json();
 

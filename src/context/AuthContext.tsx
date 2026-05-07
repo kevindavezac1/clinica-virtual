@@ -15,7 +15,7 @@ interface AuthContextType {
   user: AuthUser | null;
   token: string | null;
   isLoggedIn: boolean;
-  login: (username: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  login: (username: string, password: string) => Promise<{ ok: boolean; error?: string; codigo?: number }>;
   logout: () => void;
 }
 
@@ -147,7 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push("/");
       return { ok: true };
     }
-    return { ok: false, error: data.mensaje || "Error al iniciar sesión" };
+    return { ok: false, error: data.mensaje || "Error al iniciar sesión", codigo: data.codigo };
   };
 
   const logout = async () => {

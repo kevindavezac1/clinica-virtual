@@ -5,7 +5,10 @@ import { sendTurnoCanceladoPorMedico } from "@/lib/email";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await validateRequest(req);
+    const jwtPayload = await validateRequest(req);
+    if (jwtPayload.rol !== "Medico" && jwtPayload.rol !== "Administrador") {
+      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+    }
     const { id } = await params;
     const agendaId = Number(id);
 

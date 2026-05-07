@@ -4,7 +4,10 @@ import { validateRequest, AuthError } from "@/lib/auth";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await validateRequest(req);
+    const payload = await validateRequest(req);
+    if (payload.rol !== "Medico" && payload.rol !== "Operador" && payload.rol !== "Administrador") {
+      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+    }
     const { id } = await params;
     const rows = await prisma.agenda.findMany({
       where: { id_medico: Number(id) },

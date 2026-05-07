@@ -7,7 +7,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 interface Usuario {
   id: number; dni: string; nombre: string; apellido: string; rol: string;
   nombre_cobertura: string; telefono: string; email: string; id_cobertura: number;
-  fecha_nacimiento: string;
+  fecha_nacimiento: string; email_verificado: boolean; datos_verificados: boolean;
 }
 interface Cobertura { id: number; nombre: string; }
 
@@ -97,7 +97,7 @@ function ListarUsuarios() {
         <table className="w-full text-sm">
           <thead>
             <tr>
-              {["ID","Nombre","Apellido","DNI","Rol","Cobertura","Teléfono","Email","Acciones"].map(col => (
+              {["ID","Nombre","Apellido","DNI","Rol","Cobertura","Teléfono","Email","Email ✓","Datos ✓","Acciones"].map(col => (
                 <th key={col} className="table-header">{col}</th>
               ))}
             </tr>
@@ -113,6 +113,16 @@ function ListarUsuarios() {
                 <td className="table-cell">{u.rol === "Paciente" ? u.nombre_cobertura : "—"}</td>
                 <td className="table-cell">{u.telefono}</td>
                 <td className="table-cell">{u.email}</td>
+                <td className="table-cell">
+                  {u.email_verificado
+                    ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Sí</span>
+                    : <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">No</span>}
+                </td>
+                <td className="table-cell">
+                  {u.datos_verificados
+                    ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Sí</span>
+                    : <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-medium">No</span>}
+                </td>
                 <td className="table-cell">
                   <button onClick={() => setEditando({ ...u })} className="text-blue-600 hover:underline text-xs">Editar</button>
                 </td>
@@ -184,6 +194,18 @@ function ListarUsuarios() {
               <div>
                 <label className="label-field">Rol</label>
                 <input className="input-field bg-gray-50" value={editando.rol} readOnly />
+              </div>
+              <div className="flex items-center gap-3 pt-1">
+                <input
+                  type="checkbox"
+                  id="datos_verificados"
+                  checked={editando.datos_verificados}
+                  onChange={e => setEditando(ed => ({ ...ed!, datos_verificados: e.target.checked }))}
+                  className="w-4 h-4 accent-brand-700"
+                />
+                <label htmlFor="datos_verificados" className="text-sm text-gray-700 select-none cursor-pointer">
+                  Datos verificados en persona
+                </label>
               </div>
               {editando.rol === "Paciente" && (
                 <div>

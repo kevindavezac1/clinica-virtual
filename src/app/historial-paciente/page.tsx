@@ -10,6 +10,8 @@ interface Paciente {
   nombre: string;
   apellido: string;
   dni: string;
+  nombre_cobertura: string | null;
+  datos_verificados: boolean;
 }
 
 interface EntradaHistorial {
@@ -57,6 +59,7 @@ export default function HistorialPacientePage() {
 
 function HistorialPaciente() {
   const { token } = useAuth();
+
   const [busqueda, setBusqueda] = useState("");
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [pacienteSeleccionado, setPacienteSeleccionado] = useState<Paciente | null>(null);
@@ -103,9 +106,7 @@ function HistorialPaciente() {
           value={busqueda}
           onChange={e => setBusqueda(e.target.value)}
         />
-        {loadingPacientes && (
-          <p className="text-xs text-gray-400 mt-1">Buscando...</p>
-        )}
+        {loadingPacientes && <p className="text-xs text-gray-400 mt-1">Buscando...</p>}
         {pacientes.length > 0 && (
           <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 divide-y divide-gray-100">
             {pacientes.map(p => (
@@ -116,6 +117,9 @@ function HistorialPaciente() {
                 >
                   <span className="font-semibold text-gray-800">{p.apellido}, {p.nombre}</span>
                   <span className="ml-2 text-gray-400 text-xs">DNI {p.dni}</span>
+                  {p.datos_verificados
+                    ? <span className="ml-2 text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">Verificado</span>
+                    : <span className="ml-2 text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full">Sin verificar</span>}
                 </button>
               </li>
             ))}
@@ -123,21 +127,26 @@ function HistorialPaciente() {
         )}
       </div>
 
-      {/* Historial del paciente seleccionado */}
+      {/* Paciente seleccionado */}
       {pacienteSeleccionado && (
         <div>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-start justify-between mb-4 flex-wrap gap-2">
             <div>
-              <h2 className="text-lg font-bold text-gray-800">
-                {pacienteSeleccionado.apellido}, {pacienteSeleccionado.nombre}
-              </h2>
-              <p className="text-sm text-gray-400">DNI {pacienteSeleccionado.dni}</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-lg font-bold text-gray-800">
+                  {pacienteSeleccionado.apellido}, {pacienteSeleccionado.nombre}
+                </h2>
+                {pacienteSeleccionado.datos_verificados
+                  ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Datos verificados</span>
+                  : <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-medium">Sin verificar</span>}
+              </div>
+              <p className="text-sm text-gray-400">DNI {pacienteSeleccionado.dni} · {pacienteSeleccionado.nombre_cobertura ?? "Sin cobertura"}</p>
             </div>
             <button
               onClick={() => { setPacienteSeleccionado(null); setHistorial([]); }}
               className="text-sm text-gray-400 hover:text-gray-600"
             >
-              ✕ Cambiar paciente
+              ✕ Cambiar
             </button>
           </div>
 

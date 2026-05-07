@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { validateRequest, AuthError } from "@/lib/auth";
+import { validateRequest, AuthError, generateResetToken } from "@/lib/auth";
 import { validatePassword } from "@/lib/validatePassword";
 import { sanitizeString, sanitizeEmail } from "@/lib/sanitize";
 import { encrypt, decrypt, hmacHex } from "@/lib/crypto";
+import { sendEmailVerification } from "@/lib/email";
 import bcrypt from "bcryptjs";
 
 const ROLES_VALIDOS = ["Paciente", "Medico", "Operador", "Administrador"];
@@ -14,7 +15,10 @@ function decryptUsuario<T extends { dni: string; telefono: string; dni_hash?: st
 
 export async function GET(req: NextRequest) {
   try {
-    await validateRequest(req);
+    const jwtPayload = await validateRequest(req);
+    if (jwtPayload.rol === "Paciente") {
+      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+    }
     const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
     const rol = req.nextUrl.searchParams.get("rol") ?? "";
     const limit = Number(req.nextUrl.searchParams.get("limit")) || undefined;
@@ -67,6 +71,7 @@ export async function POST(req: NextRequest) {
     const telefonoRaw = sanitizeString(body.telefono, 20);
     const { fecha_nacimiento, password, id_cobertura, id_especialidad } = body;
 
+    const createdByStaff = callerRol === "Administrador" || callerRol === "Operador";
     const rol: string = callerRol === "Administrador" ? (body.rol ?? "Paciente") : "Paciente";
 
     if (!dniRaw || !apellido || !nombre || !email) {
@@ -90,6 +95,11 @@ export async function POST(req: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    const emailExistente = await prisma.usuario.findFirst({ where: { email } });
+    if (emailExistente) {
+      return NextResponse.json({ error: "Ya existe un usuario registrado con ese email" }, { status: 400 });
+    }
+
     const usuario = await prisma.$transaction(async (tx) => {
       const u = await tx.usuario.create({
         data: {
@@ -103,6 +113,7 @@ export async function POST(req: NextRequest) {
           email,
           telefono: encrypt(telefonoRaw)!,
           id_cobertura: id_cobertura ? Number(id_cobertura) : null,
+          email_verificado: createdByStaff,
         },
       });
       if (rol === "Medico" && id_especialidad) {
@@ -110,10 +121,22 @@ export async function POST(req: NextRequest) {
           data: { id_medico: u.id, id_especialidad: Number(id_especialidad) },
         });
       }
-      return u;
+      if (!createdByStaff) {
+        const token = generateResetToken();
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        await tx.emailVerificationToken.create({
+          data: { token, id_usuario: u.id, expires_at: expiresAt },
+        });
+        return { user: u, verificationToken: token };
+      }
+      return { user: u, verificationToken: null };
     });
 
-    return NextResponse.json({ codigo: 200, mensaje: "Usuario añadido", payload: [{ id_usuario: usuario.id }] });
+    if (usuario.verificationToken) {
+      await sendEmailVerification(email, `${nombre} ${apellido}`, usuario.verificationToken);
+    }
+
+    return NextResponse.json({ codigo: 200, mensaje: "Usuario añadido", payload: [{ id_usuario: usuario.user.id }] });
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json({ error: error.message }, { status: 401 });

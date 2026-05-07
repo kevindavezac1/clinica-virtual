@@ -5,7 +5,10 @@ import bcrypt from "bcryptjs";
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await validateRequest(req);
+    const jwtPayload = await validateRequest(req);
+    if (jwtPayload.rol !== "Administrador") {
+      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+    }
     const { id } = await params;
     const { password } = await req.json();
 

@@ -4,7 +4,10 @@ import { validateRequest, AuthError } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
-    await validateRequest(req);
+    const payload = await validateRequest(req);
+    if (payload.rol !== "Administrador") {
+      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+    }
 
     const ahora = new Date();
     const inicioMes = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), 1));

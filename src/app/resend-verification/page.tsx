@@ -3,19 +3,18 @@
 import { useState } from "react";
 import Link from "next/link";
 
-export default function ForgotPasswordPage() {
+export default function ResendVerificationPage() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [aviso, setAviso] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/forgot-password", {
+      const res = await fetch("/api/auth/resend-verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -24,9 +23,6 @@ export default function ForgotPasswordPage() {
       if (res.status === 429) {
         setError(data.mensaje ?? "Demasiados intentos. Intentá más tarde.");
         return;
-      }
-      if (data.mensaje?.includes("Te quedan")) {
-        setAviso(data.mensaje.split(". ").find((s: string) => s.startsWith("Te quedan")) ?? "");
       }
       setSubmitted(true);
     } catch {
@@ -47,12 +43,9 @@ export default function ForgotPasswordPage() {
           </div>
           <h2 className="text-xl font-bold text-slate-900">Revisá tu correo</h2>
           <p className="text-slate-500 text-sm">
-            Si el email está registrado, recibirás un enlace para restablecer tu contraseña en los próximos minutos.
+            Si el email existe y no está verificado, recibirás un nuevo enlace en los próximos minutos.
           </p>
-          {aviso && (
-            <p className="text-amber-600 text-sm bg-amber-50 rounded-lg px-3 py-2">{aviso} antes del bloqueo.</p>
-          )}
-          <Link href="/login" className="btn-primary inline-block">Volver al inicio</Link>
+          <Link href="/login" className="btn-primary inline-block">Volver al login</Link>
         </div>
       </div>
     );
@@ -61,9 +54,9 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-[60vh] flex items-center justify-center">
       <div className="card max-w-md w-full">
-        <h2 className="page-title">Recuperar contraseña</h2>
+        <h2 className="page-title">Reenviar verificación</h2>
         <p className="text-slate-500 text-sm mb-6">
-          Ingresá tu email y te enviaremos un enlace para restablecer tu contraseña.
+          Ingresá tu email y te enviaremos un nuevo enlace de verificación.
         </p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

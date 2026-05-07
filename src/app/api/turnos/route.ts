@@ -12,7 +12,10 @@ function formatFecha(fecha: Date): string {
 
 export async function GET(req: NextRequest) {
   try {
-    await validateRequest(req);
+    const payload = await validateRequest(req);
+    if (payload.rol !== "Medico" && payload.rol !== "Operador" && payload.rol !== "Administrador") {
+      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+    }
     const fecha = req.nextUrl.searchParams.get("fecha");
     if (!fecha) return NextResponse.json({ error: "Falta el parámetro fecha" }, { status: 400 });
 
@@ -57,7 +60,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await validateRequest(req);
+    const payload = await validateRequest(req);
+    if (payload.rol !== "Paciente" && payload.rol !== "Operador" && payload.rol !== "Administrador") {
+      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+    }
     const body = await req.json();
     const notaRaw = sanitizeNote(body.nota);
     const nota = encrypt(notaRaw);

@@ -25,16 +25,27 @@ export async function POST(req: NextRequest) {
 
     const user = await prisma.usuario.findFirst({
       where: { dni_hash: hmacHex(usuario ?? "") },
-      select: { id: true, nombre: true, apellido: true, rol: true, password: true },
+      select: { id: true, nombre: true, apellido: true, rol: true, password: true, email_verificado: true },
     });
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      await recordFailedAttempt(rateLimitKey);
-      return NextResponse.json({ codigo: -1, mensaje: "Usuario o contraseña incorrecta", payload: [] });
+      const { attemptsLeft, blocked } = await recordFailedAttempt(rateLimitKey);
+      const aviso = attemptsLeft <= 2 ? ` Te quedan ${attemptsLeft} intento(s).` : "";
+      const mensaje = blocked
+        ? "Demasiados intentos fallidos. Tu cuenta está bloqueada por 15 minutos."
+        : `Usuario o contraseña incorrecta.${aviso}`;
+      return NextResponse.json({ codigo: -1, mensaje, payload: [] });
+    }
+
+    if (!user.email_verificado) {
+      return NextResponse.json(
+        { codigo: -2, mensaje: "Debés verificar tu email antes de ingresar. Revisá tu casilla o solicitá un nuevo enlace.", payload: [] },
+        { status: 403 }
+      );
     }
 
     await clearAttempts(rateLimitKey);
-    const { password: _, ...userSafe } = user;
+    const { password: _, email_verificado: __, ...userSafe } = user;
 
     const accessToken = await signToken({ sub: userSafe.id, id: userSafe.id, name: userSafe.nombre, rol: userSafe.rol });
     const refreshTokenValue = generateRefreshToken();

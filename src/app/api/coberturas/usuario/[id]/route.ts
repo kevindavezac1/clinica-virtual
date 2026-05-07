@@ -4,8 +4,14 @@ import { validateRequest, AuthError } from "@/lib/auth";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await validateRequest(req);
+    const jwtPayload = await validateRequest(req);
     const { id } = await params;
+    if (jwtPayload.rol === "Paciente" && Number(jwtPayload.id) !== Number(id)) {
+      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+    }
+    if (jwtPayload.rol !== "Paciente" && jwtPayload.rol !== "Medico" && jwtPayload.rol !== "Operador" && jwtPayload.rol !== "Administrador") {
+      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+    }
     const usuario = await prisma.usuario.findUnique({
       where: { id: Number(id) },
       include: { cobertura: { select: { id: true, nombre: true } } },

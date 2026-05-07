@@ -1,14 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const { login } = useAuth();
+  const searchParams = useSearchParams();
+  const resetOk = searchParams.get("reset") === "ok";
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [emailSinVerificar, setEmailSinVerificar] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
 
@@ -20,9 +32,13 @@ export default function LoginPage() {
       return;
     }
     setLoading(true);
+    setEmailSinVerificar(false);
     const result = await login(username, password);
     setLoading(false);
-    if (!result.ok) setError(result.error || "Error al iniciar sesión");
+    if (!result.ok) {
+      if (result.codigo === -2) setEmailSinVerificar(true);
+      setError(result.error || "Error al iniciar sesión");
+    }
   };
 
   return (
@@ -40,6 +56,11 @@ export default function LoginPage() {
         </div>
 
         <div className="card shadow-card">
+          {resetOk && (
+            <div className="mb-5 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-green-700 text-sm text-center">
+              Contraseña actualizada. Podés ingresar con tu nueva contraseña.
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="label-field">DNI (usuario)</label>
@@ -96,11 +117,18 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-2 text-red-700 text-sm">
-                <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-                </svg>
-                {error}
+              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-700 text-sm space-y-1">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                  </svg>
+                  {error}
+                </div>
+                {emailSinVerificar && (
+                  <p className="pl-6">
+                    <a href="/resend-verification" className="underline font-medium">Reenviar enlace de verificación</a>
+                  </p>
+                )}
               </div>
             )}
 

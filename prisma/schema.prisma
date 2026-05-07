@@ -25,25 +25,39 @@ model Especialidad {
 }
 
 model Usuario {
-  id                    Int                  @id @default(autoincrement())
-  dni                   String               @db.Text
-  dni_hash              String?              @db.VarChar(64)
-  apellido              String               @db.VarChar(100)
-  nombre                String               @db.VarChar(100)
-  fecha_nacimiento      DateTime             @db.Date
-  password              String               @db.VarChar(255)
-  rol                   String               @db.VarChar(50)
-  email                 String               @db.VarChar(150)
-  telefono              String               @db.Text
-  id_cobertura          Int?
-  cobertura             Cobertura?           @relation(fields: [id_cobertura], references: [id])
-  agendas               Agenda[]
-  turnos_paciente       Turno[]
-  medico_especialidades MedicoEspecialidad[]
-  refresh_tokens        RefreshToken[]
-  password_reset_tokens PasswordResetToken[]
+  id                         Int                       @id @default(autoincrement())
+  dni                        String                    @db.Text
+  dni_hash                   String?                   @db.VarChar(64)
+  apellido                   String                    @db.VarChar(100)
+  nombre                     String                    @db.VarChar(100)
+  fecha_nacimiento           DateTime                  @db.Date
+  password                   String                    @db.VarChar(255)
+  rol                        String                    @db.VarChar(50)
+  email                      String                    @unique @db.VarChar(150)
+  telefono                   String                    @db.Text
+  id_cobertura               Int?
+  email_verificado           Boolean                   @default(false)
+  datos_verificados          Boolean                   @default(false)
+  cobertura                  Cobertura?                @relation(fields: [id_cobertura], references: [id])
+  agendas                    Agenda[]
+  turnos_paciente            Turno[]
+  medico_especialidades      MedicoEspecialidad[]
+  refresh_tokens             RefreshToken[]
+  password_reset_tokens      PasswordResetToken[]
+  email_verification_tokens  EmailVerificationToken[]
 
   @@map("usuario")
+}
+
+model EmailVerificationToken {
+  id         Int      @id @default(autoincrement())
+  token      String   @unique @db.VarChar(255)
+  id_usuario Int
+  expires_at DateTime
+  used       Boolean  @default(false)
+  usuario    Usuario  @relation(fields: [id_usuario], references: [id])
+
+  @@map("email_verification_token")
 }
 
 model RefreshToken {

@@ -4,7 +4,10 @@ import { validateRequest, AuthError } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
-    await validateRequest(req);
+    const payload = await validateRequest(req);
+    if (payload.rol !== "Medico" && payload.rol !== "Administrador") {
+      return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+    }
     const { id_medico, id_especialidad, fecha, hora_entrada, hora_salida, duracion = 30 } = await req.json();
 
     const existente = await prisma.agenda.findFirst({
