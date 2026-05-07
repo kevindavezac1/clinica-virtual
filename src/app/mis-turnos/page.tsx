@@ -26,11 +26,16 @@ export default function MisTurnosPage() {
   );
 }
 
-function estadoBadge(estado?: string) {
+function estadoBadge(estado?: string, sinRegistrar?: boolean) {
+  if (sinRegistrar) {
+    return <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">Sin registrar</span>;
+  }
   const map: Record<string, string> = {
     Pendiente: "bg-yellow-100 text-yellow-800",
     Confirmado: "bg-green-100 text-green-800",
     Cancelado: "bg-red-100 text-red-700",
+    Realizado: "bg-teal-100 text-teal-800",
+    Ausente: "bg-orange-100 text-orange-700",
   };
   const label = estado ?? "Pendiente";
   return (
@@ -48,6 +53,7 @@ function MisTurnos() {
   const [loading, setLoading] = useState(true);
   const [cancelando, setCancelando] = useState<number | null>(null);
   const [confirmCancel, setConfirmCancel] = useState<number | null>(null);
+  const [filtroEsp, setFiltroEsp] = useState("");
 
   const cargarTurnos = () => {
     if (!user) return;
@@ -90,7 +96,10 @@ function MisTurnos() {
     })
     .sort((a, b) => turnoMs(b) - turnoMs(a));
 
-  const lista = tab === "proximos" ? proximos : historial;
+  const especialidades = [...new Set(historial.map(t => t.especialidad))].sort();
+  const lista = tab === "proximos"
+    ? proximos
+    : historial.filter(t => !filtroEsp || t.especialidad === filtroEsp);
 
   // Muestra la fecha como "miércoles, 30 de abril de 2026" siempre en timezone Argentina
   const formatFecha = (iso: string) => {
@@ -133,18 +142,31 @@ function MisTurnos() {
 
       <div className="flex gap-2 mb-6">
         <button
-          onClick={() => setTab("proximos")}
+          onClick={() => { setTab("proximos"); setFiltroEsp(""); }}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === "proximos" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
         >
           Próximos ({proximos.length})
         </button>
         <button
-          onClick={() => setTab("historial")}
+          onClick={() => { setTab("historial"); setFiltroEsp(""); }}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === "historial" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
         >
           Historial ({historial.length})
         </button>
       </div>
+
+      {tab === "historial" && especialidades.length > 1 && (
+        <div className="mb-4">
+          <select
+            className="select-field max-w-xs"
+            value={filtroEsp}
+            onChange={e => setFiltroEsp(e.target.value)}
+          >
+            <option value="">Todas las especialidades</option>
+            {especialidades.map(e => <option key={e} value={e}>{e}</option>)}
+          </select>
+        </div>
+      )}
 
       {lista.length === 0 ? (
         <div className="card text-center text-gray-500 py-10">
@@ -162,8 +184,14 @@ function MisTurnos() {
                 <p className="font-semibold text-gray-800 capitalize">
                   {formatFecha(turno.fecha)} a las {turno.hora}
                 </p>
-                {estadoBadge(turno.estado)}
+                {estadoBadge(
+                  turno.estado,
+                  tab === "historial" && (turno.estado === "Pendiente" || turno.estado === "Confirmado")
+                )}
               </div>
+              {tab === "historial" && (turno.estado === "Pendiente" || turno.estado === "Confirmado") && (
+                <p className="text-xs text-gray-400 mt-1">El médico aún no registró si el turno fue asistido o ausente.</p>
+              )}
 
               {selected?.id_turno === turno.id_turno && (
                 <div className="mt-4 pt-4 border-t border-gray-100 space-y-1 text-sm text-gray-700">
