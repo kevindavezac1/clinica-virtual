@@ -15,6 +15,7 @@ interface Turno {
   apellido_medico: string;
   especialidad: string;
   nota?: string;
+  nota_medico?: string | null;
   estado?: string;
 }
 
@@ -54,6 +55,9 @@ function MisTurnos() {
   const [cancelando, setCancelando] = useState<number | null>(null);
   const [confirmCancel, setConfirmCancel] = useState<number | null>(null);
   const [filtroEsp, setFiltroEsp] = useState("");
+  const [mostrarCancelados, setMostrarCancelados] = useState(false);
+  const [paginaHistorial, setPaginaHistorial] = useState(1);
+  const POR_PAGINA = 10;
 
   const cargarTurnos = () => {
     if (!user) return;
@@ -97,9 +101,15 @@ function MisTurnos() {
     .sort((a, b) => turnoMs(b) - turnoMs(a));
 
   const especialidades = [...new Set(historial.map(t => t.especialidad))].sort();
-  const lista = tab === "proximos"
+  const listaFiltrada = tab === "proximos"
     ? proximos
-    : historial.filter(t => !filtroEsp || t.especialidad === filtroEsp);
+    : historial
+        .filter(t => mostrarCancelados || t.estado !== "Cancelado")
+        .filter(t => !filtroEsp || t.especialidad === filtroEsp);
+  const totalPaginasHistorial = Math.ceil(listaFiltrada.length / POR_PAGINA);
+  const lista = tab === "proximos"
+    ? listaFiltrada
+    : listaFiltrada.slice((paginaHistorial - 1) * POR_PAGINA, paginaHistorial * POR_PAGINA);
 
   // Muestra la fecha como "miércoles, 30 de abril de 2026" siempre en timezone Argentina
   const formatFecha = (iso: string) => {
@@ -142,29 +152,40 @@ function MisTurnos() {
 
       <div className="flex gap-2 mb-6">
         <button
-          onClick={() => { setTab("proximos"); setFiltroEsp(""); }}
+          onClick={() => { setTab("proximos"); setFiltroEsp(""); setPaginaHistorial(1); }}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === "proximos" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
         >
           Próximos ({proximos.length})
         </button>
         <button
-          onClick={() => { setTab("historial"); setFiltroEsp(""); }}
+          onClick={() => { setTab("historial"); setFiltroEsp(""); setPaginaHistorial(1); }}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === "historial" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
         >
           Historial ({historial.length})
         </button>
       </div>
 
-      {tab === "historial" && especialidades.length > 1 && (
-        <div className="mb-4">
-          <select
-            className="select-field max-w-xs"
-            value={filtroEsp}
-            onChange={e => setFiltroEsp(e.target.value)}
-          >
-            <option value="">Todas las especialidades</option>
-            {especialidades.map(e => <option key={e} value={e}>{e}</option>)}
-          </select>
+      {tab === "historial" && (
+        <div className="flex items-center gap-4 mb-4 flex-wrap">
+          {especialidades.length > 1 && (
+            <select
+              className="select-field max-w-xs"
+              value={filtroEsp}
+              onChange={e => { setFiltroEsp(e.target.value); setPaginaHistorial(1); }}
+            >
+              <option value="">Todas las especialidades</option>
+              {especialidades.map(e => <option key={e} value={e}>{e}</option>)}
+            </select>
+          )}
+          <label className="flex items-center gap-1.5 text-sm text-gray-500 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={mostrarCancelados}
+              onChange={e => { setMostrarCancelados(e.target.checked); setPaginaHistorial(1); }}
+              className="rounded"
+            />
+            Ver cancelados
+          </label>
         </div>
       )}
 
@@ -197,7 +218,13 @@ function MisTurnos() {
                 <div className="mt-4 pt-4 border-t border-gray-100 space-y-1 text-sm text-gray-700">
                   <p><span className="font-medium">Especialista:</span> {turno.nombre_medico} {turno.apellido_medico}</p>
                   <p><span className="font-medium">Especialidad:</span> {turno.especialidad}</p>
-                  {turno.nota && <p><span className="font-medium">Nota:</span> {turno.nota}</p>}
+                  {turno.nota && <p><span className="font-medium">Motivo de consulta:</span> {turno.nota}</p>}
+                  {tab === "historial" && turno.nota_medico && (
+                    <div className="mt-2 p-3 bg-indigo-50 rounded-lg">
+                      <p className="text-xs font-semibold text-indigo-700 mb-1">Nota del médico</p>
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{turno.nota_medico}</p>
+                    </div>
+                  )}
                   <div className="flex gap-3 mt-3 flex-wrap">
                     {tab === "proximos" && turno.estado !== "Cancelado" && (
                       puedeCancel(turno) ? (
@@ -227,6 +254,26 @@ function MisTurnos() {
             </li>
           ))}
         </ul>
+      )}
+
+      {tab === "historial" && totalPaginasHistorial > 1 && (
+        <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
+          <button
+            onClick={() => setPaginaHistorial(p => Math.max(1, p - 1))}
+            disabled={paginaHistorial === 1}
+            className="btn-secondary disabled:opacity-40"
+          >
+            ← Anterior
+          </button>
+          <span>Página {paginaHistorial} de {totalPaginasHistorial}</span>
+          <button
+            onClick={() => setPaginaHistorial(p => Math.min(totalPaginasHistorial, p + 1))}
+            disabled={paginaHistorial === totalPaginasHistorial}
+            className="btn-secondary disabled:opacity-40"
+          >
+            Siguiente →
+          </button>
+        </div>
       )}
 
       <Link href="/" className="btn-secondary mt-6 inline-block">← Volver al inicio</Link>

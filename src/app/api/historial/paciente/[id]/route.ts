@@ -11,10 +11,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
     const { id } = await params;
 
+    const incluirCancelados = req.nextUrl.searchParams.get("cancelados") === "1";
     const turnos = await prisma.turno.findMany({
       where: {
         id_paciente: Number(id),
-        estado: { not: "Cancelado" },
+        ...(incluirCancelados ? {} : { estado: { not: "Cancelado" } }),
       },
       select: {
         id: true,

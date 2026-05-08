@@ -344,15 +344,6 @@ function TurnosProgramados() {
                               </button>
                             </>
                           )}
-                          {!pasado && t.estado !== "Confirmado" && t.estado !== "Cancelado" && (
-                            <button
-                              onClick={() => cambiarEstado(t.id_turno, "Confirmado")}
-                              disabled={cambiando === t.id_turno}
-                              className="text-xs text-green-700 hover:underline disabled:opacity-50"
-                            >
-                              Confirmar
-                            </button>
-                          )}
                           {!pasado && t.estado !== "Cancelado" && (
                             <button
                               onClick={() => cambiarEstado(t.id_turno, "Cancelado")}

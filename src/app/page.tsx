@@ -110,10 +110,26 @@ const rolMenus: Record<string, { href: string; label: string; icon: React.ReactN
 };
 
 const features = [
-  { icon: "🩺", title: "Médicos especializados", desc: "Contamos con profesionales en múltiples especialidades para atender todas tus necesidades." },
-  { icon: "📅", title: "Turnos online", desc: "Reservá tu turno en cualquier momento y desde cualquier lugar, sin filas ni esperas." },
-  { icon: "🏥", title: "Atención integral", desc: "Desde consultas de clínica médica hasta especialidades de alta complejidad." },
-  { icon: "💳", title: "Obras sociales", desc: "Aceptamos las principales obras sociales y prepagas del país." },
+  {
+    icon: <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>,
+    title: "Profesionales de confianza",
+    desc: "Médicos especializados en múltiples áreas para una atención integral y de calidad.",
+  },
+  {
+    icon: <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008z" /></svg>,
+    title: "Turnos en línea",
+    desc: "Reservá tu turno desde cualquier dispositivo, las 24 horas, sin llamadas ni esperas.",
+  },
+  {
+    icon: <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" /></svg>,
+    title: "Recordatorios automáticos",
+    desc: "Recibís un email de recordatorio el día anterior a tu turno para que no lo olvides.",
+  },
+  {
+    icon: <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>,
+    title: "Obras sociales y prepagas",
+    desc: "Aceptamos las principales coberturas médicas del país. Consultá la tuya al registrarte.",
+  },
 ];
 
 export default function HomePage() {
@@ -129,10 +145,10 @@ export default function HomePage() {
               CONSULTORIOS ESPERANZA
             </span>
             <h1 className="text-4xl sm:text-5xl font-bold mb-4 leading-tight">
-              Tu salud, nuestra <span className="text-brand-200">prioridad</span>
+              Turnos médicos <span className="text-brand-200">sin complicaciones</span>
             </h1>
             <p className="text-brand-100 text-lg mb-8 max-w-xl mx-auto">
-              Gestioná tus turnos médicos de forma simple y rápida. Profesionales de confianza, atención de calidad.
+              Reservá, gestioná y recibí recordatorios de tus turnos de forma simple. Atención médica de calidad, al alcance de tu mano.
             </p>
             <div className="flex gap-3 justify-center flex-wrap">
               <Link href="/login" className="bg-white text-brand-800 font-bold px-8 py-3 rounded-xl hover:bg-brand-50 transition-colors shadow-lg">
@@ -151,8 +167,10 @@ export default function HomePage() {
           <h2 className="text-center text-2xl font-bold text-slate-800 mb-10">Atención médica de excelencia</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {features.map((f) => (
-              <div key={f.title} className="card text-center hover:shadow-lg transition-shadow">
-                <div className="text-4xl mb-3">{f.icon}</div>
+              <div key={f.title} className="card hover:shadow-lg transition-shadow">
+                <div className="w-12 h-12 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center mb-4">
+                  {f.icon}
+                </div>
                 <h3 className="font-bold text-slate-800 mb-1">{f.title}</h3>
                 <p className="text-sm text-slate-500 leading-relaxed">{f.desc}</p>
               </div>

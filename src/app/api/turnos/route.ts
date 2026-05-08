@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateRequest, AuthError } from "@/lib/auth";
-import { sendTurnoPendiente } from "@/lib/email";
+import { sendNuevoTurnoMedico, sendTurnoConfirmado } from "@/lib/email";
 import { isFeriado } from "@/lib/feriados";
 import { sanitizeNote } from "@/lib/sanitize";
 import { encrypt, decrypt } from "@/lib/crypto";
@@ -76,7 +76,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const notaRaw = sanitizeNote(body.nota);
     const nota = encrypt(notaRaw);
-    const { id_agenda, fecha, hora, id_paciente, id_cobertura } = body;
+    const { id_agenda, fecha, hora, id_cobertura } = body;
+    // Paciente solo puede sacar turno para sí mismo
+    const id_paciente = jwtPayload.rol === "Paciente" ? Number(jwtPayload.id) : body.id_paciente;
 
     const feriadoCheck = await isFeriado(fecha);
     if (feriadoCheck.es) {
@@ -122,9 +124,9 @@ export async function POST(req: NextRequest) {
     }
 
     const turno = await prisma.turno.create({
-      data: { nota, id_agenda, fecha: new Date(fecha), hora, id_paciente, id_cobertura },
+      data: { nota, id_agenda, fecha: new Date(fecha), hora, id_paciente, id_cobertura, estado: "Confirmado" },
       include: {
-        paciente: { select: { nombre: true, apellido: true } },
+        paciente: { select: { nombre: true, apellido: true, email: true } },
         agenda: {
           include: {
             medico: { select: { nombre: true, apellido: true, email: true } },
@@ -135,16 +137,19 @@ export async function POST(req: NextRequest) {
     });
 
     const { paciente, agenda } = turno;
-    sendTurnoPendiente(
-      agenda.medico.email,
-      `Dr/a. ${agenda.medico.nombre} ${agenda.medico.apellido}`,
-      `${paciente.nombre} ${paciente.apellido}`,
-      formatFecha(turno.fecha),
-      hora,
-      agenda.especialidad.descripcion
+    const nombrePaciente = `${paciente.nombre} ${paciente.apellido}`;
+    const nombreMedico = `Dr/a. ${agenda.medico.nombre} ${agenda.medico.apellido}`;
+    const fechaStr = formatFecha(turno.fecha);
+
+    sendTurnoConfirmado(
+      paciente.email, nombrePaciente, fechaStr, hora, nombreMedico, agenda.especialidad.descripcion
     ).catch(console.error);
 
-    return NextResponse.json({ codigo: 200, message: "Turno asignado correctamente", payload: [] });
+    sendNuevoTurnoMedico(
+      agenda.medico.email, nombreMedico, nombrePaciente, fechaStr, hora, agenda.especialidad.descripcion
+    ).catch(console.error);
+
+    return NextResponse.json({ codigo: 200, message: "Turno confirmado correctamente", payload: [] });
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json({ error: error.message }, { status: 401 });

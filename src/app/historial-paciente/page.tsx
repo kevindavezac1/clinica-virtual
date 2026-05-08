@@ -58,7 +58,7 @@ export default function HistorialPacientePage() {
 }
 
 function HistorialPaciente() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
   const [busqueda, setBusqueda] = useState("");
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
@@ -67,6 +67,12 @@ function HistorialPaciente() {
   const [loadingPacientes, setLoadingPacientes] = useState(false);
   const [loadingHistorial, setLoadingHistorial] = useState(false);
   const [expandido, setExpandido] = useState<number | null>(null);
+  const [editandoNota, setEditandoNota] = useState<number | null>(null);
+  const [notaTexto, setNotaTexto] = useState("");
+  const [guardandoNota, setGuardandoNota] = useState(false);
+  const [mostrarCancelados, setMostrarCancelados] = useState(false);
+  const [pagina, setPagina] = useState(1);
+  const POR_PAGINA = 15;
 
   useEffect(() => {
     if (busqueda.length < 2) { setPacientes([]); return; }
@@ -81,15 +87,46 @@ function HistorialPaciente() {
     return () => clearTimeout(t);
   }, [busqueda, token]);
 
+  const cargarHistorial = async (p: Paciente, conCancelados = mostrarCancelados) => {
+    setLoadingHistorial(true);
+    const url = `/api/historial/paciente/${p.id}${conCancelados ? "?cancelados=1" : ""}`;
+    const res = await fetch(url, { headers: { Authorization: token! } });
+    const data = await res.json();
+    if (data.payload) setHistorial(data.payload);
+    setLoadingHistorial(false);
+  };
+
+  const toggleCancelados = (val: boolean) => {
+    setMostrarCancelados(val);
+    setPagina(1);
+    if (pacienteSeleccionado) cargarHistorial(pacienteSeleccionado, val);
+  };
+
   const seleccionarPaciente = async (p: Paciente) => {
     setPacienteSeleccionado(p);
     setBusqueda("");
     setPacientes([]);
-    setLoadingHistorial(true);
-    const res = await fetch(`/api/historial/paciente/${p.id}`, { headers: { Authorization: token! } });
-    const data = await res.json();
-    if (data.payload) setHistorial(data.payload);
-    setLoadingHistorial(false);
+    setEditandoNota(null);
+    setPagina(1);
+    await cargarHistorial(p);
+  };
+
+  const abrirEditarNota = (entrada: EntradaHistorial) => {
+    setEditandoNota(entrada.id_turno);
+    setNotaTexto(entrada.nota_medico ?? "");
+    setExpandido(entrada.id_turno);
+  };
+
+  const guardarNota = async (idTurno: number) => {
+    setGuardandoNota(true);
+    await fetch(`/api/turnos/${idTurno}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: token! },
+      body: JSON.stringify({ nota_medico: notaTexto }),
+    });
+    setGuardandoNota(false);
+    setEditandoNota(null);
+    if (pacienteSeleccionado) await cargarHistorial(pacienteSeleccionado);
   };
 
   return (
@@ -142,12 +179,23 @@ function HistorialPaciente() {
               </div>
               <p className="text-sm text-gray-400">DNI {pacienteSeleccionado.dni} · {pacienteSeleccionado.nombre_cobertura ?? "Sin cobertura"}</p>
             </div>
-            <button
-              onClick={() => { setPacienteSeleccionado(null); setHistorial([]); }}
-              className="text-sm text-gray-400 hover:text-gray-600"
-            >
-              ✕ Cambiar
-            </button>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-1.5 text-sm text-gray-500 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={mostrarCancelados}
+                  onChange={e => toggleCancelados(e.target.checked)}
+                  className="rounded"
+                />
+                Ver cancelados
+              </label>
+              <button
+                onClick={() => { setPacienteSeleccionado(null); setHistorial([]); setMostrarCancelados(false); }}
+                className="text-sm text-gray-400 hover:text-gray-600"
+              >
+                ✕ Cambiar
+              </button>
+            </div>
           </div>
 
           {loadingHistorial ? (
@@ -158,11 +206,14 @@ function HistorialPaciente() {
             </div>
           ) : (
             <div className="space-y-3">
-              {historial.map(entrada => (
+              {historial.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA).map(entrada => (
                 <div key={entrada.id_turno} className="card">
                   <div
                     className="flex items-start justify-between cursor-pointer"
-                    onClick={() => setExpandido(expandido === entrada.id_turno ? null : entrada.id_turno)}
+                    onClick={() => {
+                      if (editandoNota === entrada.id_turno) return;
+                      setExpandido(expandido === entrada.id_turno ? null : entrada.id_turno);
+                    }}
                   >
                     <div>
                       <p className="font-semibold text-gray-800 text-sm">
@@ -192,8 +243,44 @@ function HistorialPaciente() {
                         </p>
                       )}
                       <div className="mt-2">
-                        <p className="font-medium text-gray-700 mb-1">Nota clínica del médico:</p>
-                        {entrada.nota_medico ? (
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="font-medium text-gray-700">Nota clínica:</p>
+                          {user?.rol === "Medico" && editandoNota !== entrada.id_turno && (
+                            <button
+                              onClick={() => abrirEditarNota(entrada)}
+                              className="text-xs text-indigo-600 hover:underline"
+                            >
+                              {entrada.nota_medico ? "Editar" : "+ Agregar nota"}
+                            </button>
+                          )}
+                        </div>
+
+                        {editandoNota === entrada.id_turno ? (
+                          <div>
+                            <textarea
+                              className="w-full border border-indigo-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"
+                              rows={4}
+                              placeholder="Diagnóstico, indicaciones, observaciones..."
+                              value={notaTexto}
+                              onChange={e => setNotaTexto(e.target.value)}
+                            />
+                            <div className="flex gap-2 mt-2">
+                              <button
+                                onClick={() => guardarNota(entrada.id_turno)}
+                                disabled={guardandoNota}
+                                className="btn-primary text-xs px-4 py-1.5 disabled:opacity-50"
+                              >
+                                {guardandoNota ? "Guardando..." : "Guardar"}
+                              </button>
+                              <button
+                                onClick={() => setEditandoNota(null)}
+                                className="btn-secondary text-xs px-4 py-1.5"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        ) : entrada.nota_medico ? (
                           <p className="text-gray-700 bg-indigo-50 rounded-lg px-3 py-2 leading-relaxed whitespace-pre-wrap">
                             {entrada.nota_medico}
                           </p>
@@ -205,6 +292,26 @@ function HistorialPaciente() {
                   )}
                 </div>
               ))}
+            </div>
+          )}
+
+          {Math.ceil(historial.length / POR_PAGINA) > 1 && (
+            <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
+              <button
+                onClick={() => setPagina(p => Math.max(1, p - 1))}
+                disabled={pagina === 1}
+                className="btn-secondary disabled:opacity-40"
+              >
+                ← Anterior
+              </button>
+              <span>Página {pagina} de {Math.ceil(historial.length / POR_PAGINA)}</span>
+              <button
+                onClick={() => setPagina(p => Math.min(Math.ceil(historial.length / POR_PAGINA), p + 1))}
+                disabled={pagina === Math.ceil(historial.length / POR_PAGINA)}
+                className="btn-secondary disabled:opacity-40"
+              >
+                Siguiente →
+              </button>
             </div>
           )}
         </div>

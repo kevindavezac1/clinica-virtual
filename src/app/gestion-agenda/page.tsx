@@ -231,42 +231,55 @@ function GestionAgenda() {
   const soloSabSelec = diasSel.every(d => d === 6);
   const incSabYSem = diasSel.includes(6) && diasSel.some(d => d >= 1 && d <= 5);
 
+  const formatDiaFecha = (iso: string) =>
+    new Date(iso + "T12:00:00Z").toLocaleDateString("es-AR", {
+      weekday: "long", day: "numeric", month: "long",
+      timeZone: "America/Argentina/Buenos_Aires",
+    });
+
   return (
     <div className="max-w-2xl mx-auto">
       <h1 className="page-title">Gestión de Agenda</h1>
 
       {/* Formulario de carga */}
       <div className="card mb-6">
-        <div className="flex gap-2 mb-5">
+
+        {/* Selector de modo */}
+        <div className="flex gap-2 mb-2">
           {(["rango", "dia"] as const).map(m => (
             <button key={m} onClick={() => setModo(m)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${modo === m ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
-              {m === "rango" ? "Carga semanal" : "Día específico"}
+              {m === "rango" ? "Carga por período" : "Día suelto"}
             </button>
           ))}
         </div>
-
-        <div className="mb-4">
-          <label className="label-field">Duración del turno</label>
-          <div className="flex gap-2 flex-wrap">
-            {DURACIONES.map(d => (
-              <button key={d} type="button"
-                onClick={() => setDuracion(d)}
-                className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors border-2 ${
-                  duracion === d
-                    ? "bg-blue-600 border-blue-600 text-white"
-                    : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
-                }`}>
-                {d} min
-              </button>
-            ))}
-          </div>
-        </div>
+        <p className="text-xs text-gray-400 mb-5">
+          {modo === "rango"
+            ? "Generá varios días de una vez eligiendo un período y qué días de la semana trabajás."
+            : "Agregá un día puntual, por ejemplo una guardia o fecha especial."}
+        </p>
 
         {modo === "rango" && (
-          <div className="space-y-4">
+          <div className="space-y-5">
+
+            {/* Paso 1: Período */}
             <div>
-              <label className="label-field">Días de la semana</label>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">1 · Período</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label-field">Desde</label>
+                  <input type="date" className="input-field" value={rDesde} min={hoy} onChange={e => setRDesde(e.target.value)} />
+                </div>
+                <div>
+                  <label className="label-field">Hasta</label>
+                  <input type="date" className="input-field" value={rHasta} min={rDesde || hoy} onChange={e => setRHasta(e.target.value)} />
+                </div>
+              </div>
+            </div>
+
+            {/* Paso 2: Días de la semana */}
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">2 · Días que trabajás</p>
               <div className="flex gap-2 flex-wrap">
                 {DIAS.map(d => (
                   <button key={d.key} type="button"
@@ -284,97 +297,147 @@ function GestionAgenda() {
                 <p className="text-xs text-orange-600 mt-2">
                   {soloSabSelec
                     ? "Los sábados la clínica cierra a las 13:00 — ese será el máximo"
-                    : "Los sábados la clínica cierra a las 13:00. Si el horario supera esa hora, el sábado se guardará hasta las 13:00"}
+                    : "Los sábados la clínica cierra a las 13:00. Si el horario supera esa hora, se ajusta automáticamente"}
                 </p>
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="label-field">Hora entrada</label>
-                <select className="select-field" value={rEntrada} onChange={e => { setREntrada(e.target.value); setRSalida(""); }}>
-                  <option value="">Seleccioná</option>
-                  {HORAS.filter(h => h < cierreMaximo()).map(h => <option key={h} value={h}>{h}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="label-field">
-                  Hora salida
-                  {soloSabSelec && <span className="text-orange-500 text-xs ml-1">(máx 12:30)</span>}
-                </label>
-                <select className="select-field" value={rSalida} onChange={e => setRSalida(e.target.value)} disabled={!rEntrada}>
-                  <option value="">Seleccioná</option>
-                  {HORAS.filter(h => h > rEntrada && (soloSabSelec ? h < cierreMaximo() : h <= cierreMaximo())).map(h => <option key={h} value={h}>{h}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="label-field">Desde</label>
-                <input type="date" className="input-field" value={rDesde} min={hoy} onChange={e => setRDesde(e.target.value)} />
-              </div>
-              <div>
-                <label className="label-field">Hasta</label>
-                <input type="date" className="input-field" value={rHasta} min={rDesde || hoy} onChange={e => setRHasta(e.target.value)} />
+            {/* Paso 3: Horarios */}
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">3 · Horario</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label-field">Entrada</label>
+                  <select className="select-field" value={rEntrada} onChange={e => { setREntrada(e.target.value); setRSalida(""); }}>
+                    <option value="">Seleccioná</option>
+                    {HORAS.filter(h => h < cierreMaximo()).map(h => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="label-field">
+                    Salida{soloSabSelec && <span className="text-orange-500 text-xs ml-1">(máx 12:30)</span>}
+                  </label>
+                  <select className="select-field" value={rSalida} onChange={e => setRSalida(e.target.value)} disabled={!rEntrada}>
+                    <option value="">Seleccioná</option>
+                    {HORAS.filter(h => h > rEntrada && (soloSabSelec ? h < cierreMaximo() : h <= cierreMaximo())).map(h => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                </div>
               </div>
             </div>
 
+            {/* Paso 4: Duración */}
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">4 · Duración de cada turno</p>
+              <div className="flex gap-2 flex-wrap">
+                {DURACIONES.map(d => (
+                  <button key={d} type="button" onClick={() => setDuracion(d)}
+                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors border-2 ${
+                      duracion === d ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
+                    }`}>
+                    {d} min
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Preview */}
             {preview.length > 0 && (
-              <div className={`text-sm rounded-lg px-4 py-3 ${incSabYSem ? "bg-orange-50 text-orange-800" : "bg-blue-50 text-blue-800"}`}>
-                Se generarán <strong>{preview.length} días</strong> de agenda
-                {incSabYSem && " (los sábados se ajustarán a 13:00 si es necesario)"}
+              <div className={`rounded-lg px-4 py-3 text-sm ${incSabYSem ? "bg-orange-50 text-orange-800" : "bg-blue-50 text-blue-800"}`}>
+                <p className="font-semibold mb-2">
+                  Se generarán <strong>{preview.length} días</strong>
+                  {incSabYSem && " (sábados ajustados a 13:00)"}
+                </p>
+                <ul className="space-y-0.5 text-xs">
+                  {preview.slice(0, 5).map(f => (
+                    <li key={f} className="capitalize">{formatDiaFecha(f)}</li>
+                  ))}
+                  {preview.length > 5 && (
+                    <li className="text-gray-400">y {preview.length - 5} días más…</li>
+                  )}
+                </ul>
               </div>
             )}
 
             <button onClick={guardarRango} className="btn-primary" disabled={preview.length === 0 || !rEntrada || !rSalida || guardando}>
-              {guardando ? "Generando..." : "Generar agenda"}
+              {guardando ? "Generando..." : `Generar ${preview.length > 0 ? preview.length + " días" : "agenda"}`}
             </button>
           </div>
         )}
 
         {modo === "dia" && (
-          <div className="space-y-4">
+          <div className="space-y-5">
+
+            {/* Fecha */}
             <div>
-              <label className="label-field">Fecha</label>
-              <input type="date" className="input-field max-w-xs" value={dFecha} min={hoy} onChange={e => { setDFecha(e.target.value); setDEntrada(""); setDSalida(""); }} />
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">1 · Fecha</p>
+              <input type="date" className="input-field max-w-xs" value={dFecha} min={hoy}
+                onChange={e => { setDFecha(e.target.value); setDEntrada(""); setDSalida(""); }} />
+              {dFecha && (
+                <p className="text-sm text-gray-600 mt-1 capitalize font-medium">{formatDiaFecha(dFecha)}</p>
+              )}
               {fechaYaTieneAgenda(dFecha) && (
-                <p className="text-amber-700 bg-amber-50 text-xs rounded-lg px-3 py-2 mt-2">
-                  Ya tenés agenda cargada para este día. Eliminala primero si querés modificarla.
-                </p>
+                <div className="flex items-start gap-2 text-amber-800 bg-amber-50 border border-amber-200 text-xs rounded-lg px-3 py-2 mt-2">
+                  <span>⚠</span>
+                  <span>Ya tenés agenda cargada para este día. Eliminala desde el calendario si querés modificarla.</span>
+                </div>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="label-field">Hora entrada</label>
-                <select className="select-field" value={dEntrada} onChange={e => { setDEntrada(e.target.value); setDSalida(""); }} disabled={fechaYaTieneAgenda(dFecha)}>
-                  <option value="">Seleccioná</option>
-                  {HORAS.filter(h => h < (esSabado(dFecha) ? CLINICA.sabado.cierre : CLINICA.semana.cierre)).map(h => <option key={h} value={h}>{h}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="label-field">
-                  Hora salida
-                  {esSabado(dFecha) && <span className="text-orange-500 text-xs ml-1">(máx 12:30)</span>}
-                </label>
-                <select className="select-field" value={dSalida} onChange={e => setDSalida(e.target.value)} disabled={!dEntrada || fechaYaTieneAgenda(dFecha)}>
-                  <option value="">Seleccioná</option>
-                  {HORAS.filter(h => h > dEntrada && (esSabado(dFecha) ? h < CLINICA.sabado.cierre : h <= CLINICA.semana.cierre)).map(h => <option key={h} value={h}>{h}</option>)}
-                </select>
+
+            {/* Horario */}
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">2 · Horario</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label-field">Entrada</label>
+                  <select className="select-field" value={dEntrada} onChange={e => { setDEntrada(e.target.value); setDSalida(""); }} disabled={fechaYaTieneAgenda(dFecha)}>
+                    <option value="">Seleccioná</option>
+                    {HORAS.filter(h => h < (esSabado(dFecha) ? CLINICA.sabado.cierre : CLINICA.semana.cierre)).map(h => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="label-field">
+                    Salida{esSabado(dFecha) && <span className="text-orange-500 text-xs ml-1">(máx 12:30)</span>}
+                  </label>
+                  <select className="select-field" value={dSalida} onChange={e => setDSalida(e.target.value)} disabled={!dEntrada || fechaYaTieneAgenda(dFecha)}>
+                    <option value="">Seleccioná</option>
+                    {HORAS.filter(h => h > dEntrada && (esSabado(dFecha) ? h < CLINICA.sabado.cierre : h <= CLINICA.semana.cierre)).map(h => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                </div>
               </div>
             </div>
-            <button onClick={guardarDia} className="btn-primary" disabled={fechaYaTieneAgenda(dFecha)}>Guardar día</button>
+
+            {/* Duración */}
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">3 · Duración de cada turno</p>
+              <div className="flex gap-2 flex-wrap">
+                {DURACIONES.map(d => (
+                  <button key={d} type="button" onClick={() => setDuracion(d)}
+                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors border-2 ${
+                      duracion === d ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
+                    }`}>
+                    {d} min
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button onClick={guardarDia} className="btn-primary" disabled={fechaYaTieneAgenda(dFecha) || !dEntrada || !dSalida}>
+              Guardar día
+            </button>
           </div>
         )}
       </div>
 
       {/* Vista mensual */}
       <div className="card">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-1">
           <button onClick={() => navMes(-1)} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-600 font-bold">‹</button>
           <h2 className="font-semibold text-gray-800 capitalize">{formatMes(mesVista)}</h2>
           <button onClick={() => navMes(1)} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-600 font-bold">›</button>
         </div>
+        <p className="text-xs text-center text-gray-400 mb-4">
+          {agendaMes.length === 0 ? "Sin días cargados" : `${agendaMes.length} día${agendaMes.length !== 1 ? "s" : ""} cargado${agendaMes.length !== 1 ? "s" : ""}`}
+        </p>
 
         {loadingMes ? (
           <p className="text-gray-400 text-sm text-center py-6">Cargando...</p>

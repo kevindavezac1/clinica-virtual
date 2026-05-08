@@ -21,6 +21,7 @@ function CrearPaciente() {
   const router = useRouter();
   const [coberturas, setCoberturas] = useState<Cobertura[]>([]);
   const [repeatPassword, setRepeatPassword] = useState("");
+  const [repeatPasswordError, setRepeatPasswordError] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -37,7 +38,7 @@ function CrearPaciente() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     let value = e.target.value;
     if (e.target.name === "dni") value = value.replace(/\D/g, "").slice(0, 8);
-    if (e.target.name === "telefono") value = value.replace(/\D/g, "").slice(0, 15);
+    if (e.target.name === "telefono") value = value.replace(/\D/g, "").slice(0, 10);
     if (e.target.name === "nombre" || e.target.name === "apellido") value = value.replace(/[0-9]/g, "");
     setForm(f => ({ ...f, [e.target.name]: value }));
     if (fieldErrors[e.target.name]) setFieldErrors(f => ({ ...f, [e.target.name]: "" }));
@@ -98,9 +99,35 @@ function CrearPaciente() {
             <input name="apellido" className="input-field" value={form.apellido} onChange={handleChange} onBlur={handleBlur} required />
             {fe("apellido")}
           </div>
+          <div className="col-span-2">
+            <label className="label-field">Fecha de nacimiento</label>
+            <FechaNacimientoInput value={form.fecha_nacimiento} onChange={v => setForm(f => ({ ...f, fecha_nacimiento: v }))} required />
+          </div>
           <div>
             <label className="label-field">Contraseña</label>
             <input type="password" name="password" className="input-field" value={form.password} onChange={handleChange} required />
+            <p className="text-xs text-slate-400 mt-1">Mínimo 8 caracteres, una mayúscula y un número</p>
+          </div>
+          <div>
+            <label className="label-field">Repetir contraseña</label>
+            <input
+              type="password"
+              className={`input-field ${repeatPasswordError ? "border-red-400" : ""}`}
+              value={repeatPassword}
+              onChange={e => {
+                setRepeatPassword(e.target.value);
+                if (repeatPasswordError) setRepeatPasswordError("");
+              }}
+              onBlur={e => {
+                if (e.target.value && form.password !== e.target.value) {
+                  setRepeatPasswordError("Las contraseñas no coinciden");
+                } else {
+                  setRepeatPasswordError("");
+                }
+              }}
+              required
+            />
+            {repeatPasswordError && <p className="text-xs text-red-500 mt-1">{repeatPasswordError}</p>}
           </div>
           <div>
             <label className="label-field">Email</label>
@@ -108,16 +135,8 @@ function CrearPaciente() {
           </div>
           <div>
             <label className="label-field">Teléfono</label>
-            <input name="telefono" className="input-field" value={form.telefono} onChange={handleChange} onBlur={handleBlur} inputMode="numeric" placeholder="Ej: 3496500494" required />
+            <input name="telefono" className="input-field" value={form.telefono} onChange={handleChange} onBlur={handleBlur} inputMode="numeric" placeholder="Ej: 3496500494" maxLength={10} required />
             {fe("telefono")}
-          </div>
-          <div className="col-span-2">
-            <label className="label-field">Fecha de nacimiento</label>
-            <FechaNacimientoInput value={form.fecha_nacimiento} onChange={v => setForm(f => ({ ...f, fecha_nacimiento: v }))} required />
-          </div>
-          <div>
-            <label className="label-field">Repetir contraseña</label>
-            <input type="password" className="input-field" value={repeatPassword} onChange={e => setRepeatPassword(e.target.value)} required />
           </div>
         </div>
         <div>

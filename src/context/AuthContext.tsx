@@ -15,6 +15,7 @@ interface AuthContextType {
   user: AuthUser | null;
   token: string | null;
   isLoggedIn: boolean;
+  isReady: boolean;
   login: (username: string, password: string) => Promise<{ ok: boolean; error?: string; codigo?: number }>;
   logout: () => void;
 }
@@ -33,6 +34,7 @@ function getTokenExpiry(token: string): number | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [isReady, setIsReady] = useState(false);
   const router = useRouter();
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const warnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -45,14 +47,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const setAuth = useCallback((newToken: string, newUser: AuthUser) => {
-    localStorage.setItem("token", newToken);
+    // Token stays in memory only — never localStorage — to prevent XSS token theft
     localStorage.setItem("payload", JSON.stringify(newUser));
     setToken(newToken);
     setUser(newUser);
   }, []);
 
   const clearAuth = useCallback(() => {
-    localStorage.removeItem("token");
     localStorage.removeItem("payload");
     setToken(null);
     setUser(null);
@@ -60,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const sessionExpired = useCallback(() => {
-    const wasLoggedIn = !!localStorage.getItem("token");
+    const wasLoggedIn = !!localStorage.getItem("payload");
     clearAuth();
     if (wasLoggedIn) {
       toast("Tu sesión expiró. Vas a ser redirigido al login.", "error");
@@ -82,10 +83,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem("token");
     const storedUser = localStorage.getItem("payload");
-    const exp = storedToken ? getTokenExpiry(storedToken) : null;
-    const tokenValid = storedToken && storedUser && exp && exp > Date.now();
+
+    // Show cached user immediately for instant UX while refresh runs in background
+    if (storedUser) {
+      try { setUser(JSON.parse(storedUser)); } catch { localStorage.removeItem("payload"); }
+    }
 
     const doRefresh = async () => {
       try {
@@ -101,16 +104,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessionExpired();
       } catch {
         sessionExpired();
+      } finally {
+        setIsReady(true);
       }
     };
 
-    if (tokenValid) {
-      setToken(storedToken!);
-      setUser(JSON.parse(storedUser!));
-      scheduleRefresh(storedToken!, doRefresh);
-    } else {
-      doRefresh();
-    }
+    doRefresh();
 
     return () => clearRefreshTimer();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -159,7 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoggedIn: !!user, login, logout }}>
+    <AuthContext.Provider value={{ user, token, isLoggedIn: !!user && !!token, isReady, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

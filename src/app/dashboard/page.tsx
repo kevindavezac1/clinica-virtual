@@ -22,12 +22,17 @@ export default function DashboardPage() {
   );
 }
 
-function StatCard({ label, value, sub, color }: { label: string; value: number | string; sub?: string; color: string }) {
+function StatCard({ label, value, sub, icon }: { label: string; value: number | string; sub?: string; icon: React.ReactNode }) {
   return (
-    <div className={`card border-l-4 ${color}`}>
-      <p className="text-sm text-gray-500 mb-1">{label}</p>
-      <p className="text-3xl font-bold text-gray-800">{value}</p>
-      {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+    <div className="card flex items-start gap-4">
+      <div className="w-10 h-10 rounded-lg bg-brand-50 text-brand-700 flex items-center justify-center shrink-0 mt-0.5">
+        {icon}
+      </div>
+      <div>
+        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">{label}</p>
+        <p className="text-2xl font-bold text-slate-800 leading-none">{value}</p>
+        {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+      </div>
     </div>
   );
 }
@@ -77,10 +82,14 @@ function Dashboard() {
 
       {/* KPIs principales */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <StatCard label="Turnos hoy" value={data.turnosHoy} color="border-blue-500" />
-        <StatCard label="Turnos del mes" value={data.turnosMes.total} color="border-indigo-500" />
-        <StatCard label="Pacientes" value={data.totalPacientes} sub="registrados en total" color="border-teal-500" />
-        <StatCard label="Médicos" value={data.totalMedicos} sub="en el sistema" color="border-purple-500" />
+        <StatCard label="Turnos hoy" value={data.turnosHoy}
+          icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
+        <StatCard label="Turnos del mes" value={data.turnosMes.total}
+          icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>} />
+        <StatCard label="Pacientes" value={data.totalPacientes} sub="registrados en total"
+          icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>} />
+        <StatCard label="Médicos" value={data.totalMedicos} sub="en el sistema"
+          icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>} />
       </div>
 
       {/* Estados del mes + Especialidades */}
@@ -142,21 +151,31 @@ function Dashboard() {
 
       {/* Próximos 7 días */}
       <div className="card mb-6">
-        <h2 className="font-semibold text-gray-700 mb-4">Turnos — próximos 7 días</h2>
+        <h2 className="font-semibold text-gray-700 mb-5">Turnos — próximos 7 días</h2>
         {data.proximos7.length === 0 ? (
           <p className="text-sm text-gray-400">No hay turnos programados</p>
         ) : (
-          <div className="flex items-end gap-2 h-28">
-            {data.proximos7.map(({ fecha, cantidad }) => (
-              <div key={fecha} className="flex-1 flex flex-col items-center gap-1">
-                <span className="text-xs font-semibold text-gray-700">{cantidad}</span>
-                <div
-                  className="w-full bg-blue-500 rounded-t-md transition-all"
-                  style={{ height: `${Math.round((cantidad / maxProx) * 80)}px`, minHeight: "4px" }}
-                />
-                <span className="text-xs text-gray-400 text-center capitalize leading-tight">{formatFecha(fecha)}</span>
-              </div>
-            ))}
+          <div className="flex items-end gap-1.5" style={{ height: "120px" }}>
+            {data.proximos7.map(({ fecha, cantidad }) => {
+              const pct = Math.round((cantidad / maxProx) * 100);
+              const esHoy = fecha === new Date().toLocaleDateString("en-CA", { timeZone: "America/Argentina/Buenos_Aires" });
+              return (
+                <div key={fecha} className="flex-1 flex flex-col items-center justify-end gap-1 h-full">
+                  {cantidad > 0 && (
+                    <span className="text-xs font-bold text-slate-600">{cantidad}</span>
+                  )}
+                  <div className="w-full flex flex-col justify-end" style={{ height: "72px" }}>
+                    <div
+                      className={`w-full rounded-t transition-all ${esHoy ? "bg-brand-700" : "bg-brand-300"}`}
+                      style={{ height: cantidad > 0 ? `${Math.max(pct * 0.72, 4)}px` : "2px", opacity: cantidad > 0 ? 1 : 0.3 }}
+                    />
+                  </div>
+                  <span className="text-xs text-gray-400 text-center capitalize leading-tight w-full truncate px-0.5">
+                    {formatFecha(fecha)}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

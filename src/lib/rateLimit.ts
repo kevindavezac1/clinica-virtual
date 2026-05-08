@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
 
-const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 15 * 60 * 1000;
 const BLOCK_MS = 15 * 60 * 1000;
 
@@ -20,7 +19,10 @@ export async function isRateLimited(key: string): Promise<{ limited: boolean; mi
   return { limited: false };
 }
 
-export async function recordFailedAttempt(key: string): Promise<{ attemptsLeft: number; blocked: boolean }> {
+export async function recordFailedAttempt(
+  key: string,
+  maxAttempts = 5
+): Promise<{ attemptsLeft: number; blocked: boolean }> {
   const now = new Date();
   const windowStart = new Date(now.getTime() - WINDOW_MS);
 
@@ -32,11 +34,11 @@ export async function recordFailedAttempt(key: string): Promise<{ attemptsLeft: 
       create: { key, count: 1, window_start: now },
       update: { count: 1, window_start: now, blocked_until: null },
     });
-    return { attemptsLeft: MAX_ATTEMPTS - 1, blocked: false };
+    return { attemptsLeft: maxAttempts - 1, blocked: false };
   }
 
   const newCount = entry.count + 1;
-  const blocked = newCount >= MAX_ATTEMPTS;
+  const blocked = newCount >= maxAttempts;
   await prisma.loginAttempt.update({
     where: { key },
     data: {
@@ -44,7 +46,7 @@ export async function recordFailedAttempt(key: string): Promise<{ attemptsLeft: 
       blocked_until: blocked ? new Date(now.getTime() + BLOCK_MS) : null,
     },
   });
-  return { attemptsLeft: Math.max(0, MAX_ATTEMPTS - newCount), blocked };
+  return { attemptsLeft: Math.max(0, maxAttempts - newCount), blocked };
 }
 
 export async function clearAttempts(key: string): Promise<void> {

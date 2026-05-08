@@ -19,6 +19,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       select: {
         id: true,
         nota: true,
+        nota_medico: true,
         estado: true,
         fecha: true,
         hora: true,
@@ -33,9 +34,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       },
     });
 
+    const esPaciente = jwtPayload.rol === "Paciente";
     const payload = turnos.map((t) => ({
       id_turno: t.id,
       nota: decrypt(t.nota),
+      // Paciente solo ve nota_medico en turnos ya realizados
+      nota_medico: (!esPaciente || t.estado === "Realizado") ? decrypt(t.nota_medico) : null,
       estado: t.estado,
       fecha: t.fecha,
       hora: t.hora,

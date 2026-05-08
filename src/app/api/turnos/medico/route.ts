@@ -6,7 +6,8 @@ import { decrypt } from "@/lib/crypto";
 export async function POST(req: NextRequest) {
   try {
     const jwtPayload = await validateRequest(req);
-    if (jwtPayload.rol !== "Medico" && jwtPayload.rol !== "Operador" && jwtPayload.rol !== "Administrador") {
+    const esPaciente = jwtPayload.rol === "Paciente";
+    if (!["Paciente", "Medico", "Operador", "Administrador"].includes(jwtPayload.rol as string)) {
       return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
     }
     const { id_medico, fecha } = await req.json();
@@ -28,6 +29,12 @@ export async function POST(req: NextRequest) {
         cobertura: { select: { nombre: true } },
       },
     });
+
+    // Paciente solo recibe hora+estado para calcular disponibilidad — sin datos de otros pacientes
+    if (esPaciente) {
+      const payload = turnos.map((t) => ({ hora: t.hora, estado: t.estado }));
+      return NextResponse.json({ codigo: 200, mensaje: "OK", payload });
+    }
 
     const payload = turnos.map((t) => ({
       id_turno: t.id,

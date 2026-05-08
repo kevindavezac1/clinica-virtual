@@ -7,9 +7,28 @@ import { hmacHex } from "@/lib/crypto";
 import bcrypt from "bcryptjs";
 
 const REFRESH_DAYS = 7;
+const IP_MAX_ATTEMPTS = 20;
+
+function getClientIp(req: NextRequest): string {
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+    req.headers.get("x-real-ip") ??
+    "unknown"
+  );
+}
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req);
+    const ipKey = `login:ip:${ip}`;
+    const ipCheck = await isRateLimited(ipKey);
+    if (ipCheck.limited) {
+      return NextResponse.json(
+        { codigo: -1, mensaje: `Demasiados intentos desde tu red. Intentá en ${ipCheck.minutesLeft} minuto(s).`, payload: [] },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const usuario = sanitizeString(body.usuario);
     const password = typeof body.password === "string" ? body.password : "";
@@ -29,6 +48,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
+      await recordFailedAttempt(ipKey, IP_MAX_ATTEMPTS);
       const { attemptsLeft, blocked } = await recordFailedAttempt(rateLimitKey);
       const aviso = attemptsLeft <= 2 ? ` Te quedan ${attemptsLeft} intento(s).` : "";
       const mensaje = blocked
@@ -45,6 +65,7 @@ export async function POST(req: NextRequest) {
     }
 
     await clearAttempts(rateLimitKey);
+    await clearAttempts(ipKey);
     const { password: _, email_verificado: __, ...userSafe } = user;
 
     const accessToken = await signToken({ sub: userSafe.id, id: userSafe.id, name: userSafe.nombre, rol: userSafe.rol });

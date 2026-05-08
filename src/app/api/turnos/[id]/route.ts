@@ -49,22 +49,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
     }
 
-    // Pacientes solo pueden cancelar con +24hs de anticipación
+    // Pacientes solo pueden cancelar su propio turno con +24hs de anticipación
     if (estado === "Cancelado" && jwtPayload.rol === "Paciente") {
       const turnoExistente = await prisma.turno.findUnique({
         where: { id: Number(id) },
-        select: { fecha: true, hora: true },
+        select: { fecha: true, hora: true, id_paciente: true },
       });
-      if (turnoExistente) {
-        const turnoDateTime = new Date(`${turnoExistente.fecha.toISOString().split("T")[0]}T${turnoExistente.hora.padStart(5, "0")}:00-03:00`);
-        const ahoraAR = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" }));
-        const diffHoras = (turnoDateTime.getTime() - ahoraAR.getTime()) / 3_600_000;
-        if (diffHoras < 24) {
-          return NextResponse.json(
-            { codigo: -1, mensaje: "No podés cancelar con menos de 24hs de anticipación. Llamá al consultorio: +54 3496 417428", payload: [] },
-            { status: 400 }
-          );
-        }
+      if (!turnoExistente || turnoExistente.id_paciente !== Number(jwtPayload.id)) {
+        return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
+      }
+      const turnoDateTime = new Date(`${turnoExistente.fecha.toISOString().split("T")[0]}T${turnoExistente.hora.padStart(5, "0")}:00-03:00`);
+      const ahoraAR = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" }));
+      const diffHoras = (turnoDateTime.getTime() - ahoraAR.getTime()) / 3_600_000;
+      if (diffHoras < 24) {
+        return NextResponse.json(
+          { codigo: -1, mensaje: "No podés cancelar con menos de 24hs de anticipación. Llamá al consultorio: +54 3496 417428", payload: [] },
+          { status: 400 }
+        );
       }
     }
 
@@ -109,34 +110,3 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    await validateRequest(req);
-    const { id } = await params;
-    const { nota, id_agenda, fecha, hora, id_paciente, id_cobertura } = await req.json();
-    await prisma.turno.update({
-      where: { id: Number(id) },
-      data: { nota: encrypt(nota), id_agenda, fecha: new Date(fecha), hora, id_paciente, id_cobertura },
-    });
-    return NextResponse.json({ codigo: 200, mensaje: "Turno modificado", payload: [] });
-  } catch (error) {
-    if (error instanceof AuthError) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
-    }
-    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
-  }
-}
-
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    await validateRequest(req);
-    const { id } = await params;
-    await prisma.turno.delete({ where: { id: Number(id) } });
-    return NextResponse.json({ codigo: 200, mensaje: "Turno eliminado", payload: [] });
-  } catch (error) {
-    if (error instanceof AuthError) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
-    }
-    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
-  }
-}

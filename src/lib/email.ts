@@ -57,14 +57,14 @@ export async function sendPasswordReset(to: string, nombre: string, token: strin
   });
 }
 
-export async function sendTurnoPendiente(to: string, medico: string, paciente: string, fecha: string, hora: string, especialidad: string) {
+export async function sendNuevoTurnoMedico(to: string, medico: string, paciente: string, fecha: string, hora: string, especialidad: string) {
   await transporter.sendMail({
     from: FROM,
     to,
-    subject: "Nuevo turno pendiente de confirmación — Consultorios Esperanza",
+    subject: "Nuevo turno agendado — Consultorios Esperanza",
     html: wrap(`
-      <h2 style="color:#1e3a5f;margin-top:0">Nuevo turno pendiente</h2>
-      <p>Hola <strong>${medico}</strong>, tenés un nuevo turno esperando confirmación.</p>
+      <h2 style="color:#1e3a5f;margin-top:0">Nuevo turno agendado</h2>
+      <p>Hola <strong>${medico}</strong>, se agendó un nuevo turno para vos.</p>
       <table style="border-collapse:collapse;width:100%;margin:16px 0">
         <tr><td style="padding:8px 0;color:#666;width:120px">Paciente</td><td style="padding:8px 0;font-weight:600">${paciente}</td></tr>
         <tr><td style="padding:8px 0;color:#666">Especialidad</td><td style="padding:8px 0;font-weight:600">${especialidad}</td></tr>

@@ -11,7 +11,7 @@ interface Props {
 }
 
 export default function ProtectedRoute({ children, allowedRole }: Props) {
-  const { isLoggedIn, user } = useAuth();
+  const { isLoggedIn, isReady, user } = useAuth();
   const router = useRouter();
 
   const allowed = !allowedRole || (
@@ -21,6 +21,7 @@ export default function ProtectedRoute({ children, allowedRole }: Props) {
   );
 
   useEffect(() => {
+    if (!isReady) return;
     if (!isLoggedIn) {
       router.push("/");
       return;
@@ -29,11 +30,10 @@ export default function ProtectedRoute({ children, allowedRole }: Props) {
       toast("No tenés permisos para acceder a esta página", "error");
       router.push("/");
     }
-  }, [isLoggedIn, allowed, router]);
+  }, [isReady, isLoggedIn, allowed, router]);
 
-  if (!isLoggedIn || !allowed) {
-    return null;
-  }
+  if (!isReady) return null;
+  if (!isLoggedIn || !allowed) return null;
 
   return <>{children}</>;
 }
