@@ -198,12 +198,12 @@ function AsignarTurno() {
         <div>
           <label className="label-field">Paciente</label>
           {pacienteSeleccionado ? (
-            <div className="input-field bg-gray-50 flex items-center justify-between">
-              <span className="text-gray-800 font-medium">
+            <div className="input-field bg-slate-50 flex items-center justify-between">
+              <span className="text-slate-800 font-medium">
                 {pacienteSeleccionado.apellido}, {pacienteSeleccionado.nombre}
-                <span className="ml-2 text-gray-400 font-normal text-xs">DNI {pacienteSeleccionado.dni}</span>
+                <span className="ml-2 text-slate-400 font-normal text-xs">DNI {pacienteSeleccionado.dni}</span>
               </span>
-              <button type="button" onClick={limpiarPaciente} className="text-gray-400 hover:text-gray-600 ml-2 text-sm">✕</button>
+              <button type="button" onClick={limpiarPaciente} className="text-slate-400 hover:text-slate-600 ml-2 text-sm transition-colors">✕</button>
             </div>
           ) : (
             <div className="relative">
@@ -214,18 +214,18 @@ function AsignarTurno() {
                 value={busquedaPaciente}
                 onChange={e => setBusquedaPaciente(e.target.value)}
               />
-              {buscando && <p className="text-xs text-gray-400 mt-1">Buscando...</p>}
+              {buscando && <p className="text-xs text-slate-400 mt-1">Buscando...</p>}
               {sugerencias.length > 0 && (
-                <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 divide-y divide-gray-100">
+                <ul className="absolute z-10 w-full bg-white border border-slate-200 rounded-xl shadow-lg mt-1 divide-y divide-slate-100">
                   {sugerencias.map(p => (
                     <li key={p.id}>
                       <button
                         type="button"
                         onClick={() => seleccionarPaciente(p)}
-                        className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm"
+                        className="w-full text-left px-4 py-2.5 hover:bg-slate-50 text-sm transition-colors"
                       >
-                        <span className="font-semibold text-gray-800">{p.apellido}, {p.nombre}</span>
-                        <span className="ml-2 text-gray-400 text-xs">DNI {p.dni}</span>
+                        <span className="font-semibold text-slate-800">{p.apellido}, {p.nombre}</span>
+                        <span className="ml-2 text-slate-400 text-xs">DNI {p.dni}</span>
                       </button>
                     </li>
                   ))}
@@ -238,7 +238,7 @@ function AsignarTurno() {
         <div>
           <label className="label-field">Cobertura</label>
           <input
-            className="input-field bg-gray-50"
+            className="input-field bg-slate-50 text-slate-500 cursor-default"
             value={coberturaNombre || (pacienteSeleccionado ? "Cargando..." : "Se carga al elegir paciente")}
             readOnly
           />
@@ -263,7 +263,7 @@ function AsignarTurno() {
           <div>
             <label className="label-field">Fecha</label>
             {fechasDisponibles.length === 0 ? (
-              <p className="text-sm text-gray-400 py-2">El médico no tiene agenda cargada</p>
+              <p className="text-sm text-slate-400 py-2">El médico no tiene agenda cargada</p>
             ) : (() => {
               const fechasSet = new Set(fechasDisponibles);
               const [cy, cm] = calMes.split("-").map(Number);
@@ -286,15 +286,15 @@ function AsignarTurno() {
                 setCalMes(d.toISOString().slice(0, 7));
               };
               return (
-                <div className="border border-gray-200 rounded-xl p-3">
+                <div className="border border-slate-200 rounded-xl p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <button type="button" onClick={() => navMes(-1)} className="w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-500 font-bold">‹</button>
-                    <span className="text-sm font-semibold text-gray-700 capitalize">{labelMes}</span>
-                    <button type="button" onClick={() => navMes(1)} className="w-7 h-7 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-500 font-bold">›</button>
+                    <button type="button" onClick={() => navMes(-1)} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500 font-bold transition-colors">‹</button>
+                    <span className="text-sm font-semibold text-slate-700 capitalize">{labelMes}</span>
+                    <button type="button" onClick={() => navMes(1)} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500 font-bold transition-colors">›</button>
                   </div>
                   <div className="grid grid-cols-7 gap-1 mb-1">
                     {["Lu", "Ma", "Mi", "Ju", "Vi", "Sa", "Do"].map(d => (
-                      <div key={d} className="text-center text-xs text-gray-400 font-medium py-1">{d}</div>
+                      <div key={d} className="text-center text-xs text-slate-500 font-semibold py-1">{d}</div>
                     ))}
                   </div>
                   <div className="grid grid-cols-7 gap-1">
@@ -310,10 +310,10 @@ function AsignarTurno() {
                           onClick={() => onFechaChange(fecha)}
                           className={`aspect-square flex items-center justify-center rounded-lg text-sm transition-colors font-medium
                             ${seleccionado
-                              ? "bg-blue-600 text-white"
+                              ? "bg-brand-700 text-white shadow-sm"
                               : disponible
-                                ? "bg-blue-50 text-blue-700 hover:bg-blue-100 cursor-pointer"
-                                : "text-gray-300 cursor-default"
+                                ? "bg-brand-50 text-brand-700 hover:bg-brand-100 cursor-pointer"
+                                : "text-slate-300 cursor-default"
                             }`}
                         >
                           {Number(fecha.split("-")[2])}

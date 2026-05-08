@@ -22,7 +22,9 @@ const config: Config = {
         sans: ["Inter", "sans-serif"],
       },
       boxShadow: {
-        card: "0 2px 15px -3px rgba(0,0,0,0.07), 0 10px 20px -2px rgba(0,0,0,0.04)",
+        card: "0 1px 2px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.04)",
+        "card-md": "0 4px 16px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)",
+        "card-lg": "0 8px 32px rgba(0,0,0,0.10), 0 1px 2px rgba(0,0,0,0.04)",
       },
     },
   },

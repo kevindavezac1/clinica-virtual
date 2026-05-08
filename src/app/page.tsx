@@ -139,12 +139,13 @@ export default function HomePage() {
     return (
       <div className="-mx-4 -mt-8">
         {/* Hero */}
-        <div className="bg-gradient-to-br from-brand-800 to-brand-600 text-white px-4 py-20">
-          <div className="max-w-3xl mx-auto text-center">
-            <span className="inline-block bg-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full mb-4 tracking-wide">
+        <div className="bg-gradient-to-br from-brand-900 via-brand-800 to-brand-600 text-white px-4 py-24 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(circle, white 1.5px, transparent 1.5px)', backgroundSize: '28px 28px' }} />
+          <div className="max-w-3xl mx-auto text-center relative">
+            <span className="inline-block bg-white/10 border border-white/20 text-white/90 text-xs font-semibold px-3 py-1 rounded-full mb-4 tracking-wide">
               CONSULTORIOS ESPERANZA
             </span>
-            <h1 className="text-4xl sm:text-5xl font-bold mb-4 leading-tight">
+            <h1 className="text-4xl sm:text-5xl font-bold mb-4 leading-tight tracking-tight">
               Turnos médicos <span className="text-brand-200">sin complicaciones</span>
             </h1>
             <p className="text-brand-100 text-lg mb-8 max-w-xl mx-auto">
@@ -154,7 +155,7 @@ export default function HomePage() {
               <Link href="/login" className="bg-white text-brand-800 font-bold px-8 py-3 rounded-xl hover:bg-brand-50 transition-colors shadow-lg">
                 Iniciar sesión
               </Link>
-              <Link href="/register" className="bg-brand-700 border-2 border-white/30 text-white font-bold px-8 py-3 rounded-xl hover:bg-brand-800 transition-colors">
+              <Link href="/register" className="bg-brand-700 border border-white/30 text-white font-bold px-8 py-3 rounded-xl hover:bg-brand-800 transition-colors">
                 Registrarse gratis
               </Link>
             </div>
@@ -164,10 +165,10 @@ export default function HomePage() {
         {/* Features */}
         <div className="max-w-6xl mx-auto px-4 py-16">
           <p className="text-center text-brand-700 font-semibold text-sm uppercase tracking-wide mb-2">¿Por qué elegirnos?</p>
-          <h2 className="text-center text-2xl font-bold text-slate-800 mb-10">Atención médica de excelencia</h2>
+          <h2 className="text-center text-2xl font-bold text-slate-800 mb-10 tracking-tight">Atención médica de excelencia</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {features.map((f) => (
-              <div key={f.title} className="card hover:shadow-lg transition-shadow">
+              <div key={f.title} className="card hover:shadow-card-md transition-all duration-200">
                 <div className="w-12 h-12 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center mb-4">
                   {f.icon}
                 </div>
@@ -197,12 +198,15 @@ export default function HomePage() {
   return (
     <div className="max-w-2xl mx-auto">
       {/* Welcome */}
-      <div className="bg-gradient-to-r from-brand-700 to-brand-600 text-white rounded-2xl p-6 mb-8 shadow-lg">
-        <p className="text-brand-200 text-sm font-medium mb-1">Bienvenido de nuevo</p>
-        <h1 className="text-2xl font-bold">{user?.nombre} {user?.apellido ?? ""}</h1>
-        <span className="inline-block mt-2 bg-white/20 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
-          {user?.rol}
-        </span>
+      <div className="bg-gradient-to-br from-brand-800 to-brand-600 text-white rounded-2xl p-6 mb-8 shadow-card-lg relative overflow-hidden">
+        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(circle, white 1.5px, transparent 1.5px)', backgroundSize: '24px 24px' }} />
+        <div className="relative">
+          <p className="text-brand-200 text-sm font-medium mb-1">Bienvenido de nuevo</p>
+          <h1 className="text-2xl font-bold tracking-tight">{user?.nombre} {user?.apellido ?? ""}</h1>
+          <span className="inline-block mt-2 bg-white/20 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
+            {user?.rol}
+          </span>
+        </div>
       </div>
 
       <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">¿Qué querés hacer?</p>

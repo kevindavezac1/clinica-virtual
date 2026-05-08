@@ -55,19 +55,19 @@ function GestionEspecialidades() {
     <div className="max-w-2xl mx-auto">
       <h1 className="page-title">Gestión de Especialidades</h1>
       <div className="card mb-6">
-        <h2 className="font-semibold text-gray-700 mb-3">Nueva especialidad</h2>
+        <h2 className="font-semibold text-slate-700 mb-3">Nueva especialidad</h2>
         <div className="flex gap-3">
           <input className="input-field flex-1" value={nueva} onChange={e => setNueva(e.target.value)} placeholder="Nombre de la especialidad" />
           <button onClick={agregar} className="btn-primary">Agregar</button>
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl shadow-sm border border-gray-100">
+      <div className="overflow-x-auto rounded-xl shadow-sm border border-slate-200">
         <table className="w-full text-sm">
           <thead><tr><th className="table-header rounded-tl-xl">ID</th><th className="table-header">Descripción</th><th className="table-header rounded-tr-xl">Acciones</th></tr></thead>
           <tbody>
             {especialidades.map(e => (
-              <tr key={e.id} className="hover:bg-gray-50">
+              <tr key={e.id} className="hover:bg-slate-50 transition-colors">
                 <td className="table-cell">{e.id}</td>
                 <td className="table-cell">{e.descripcion}</td>
                 <td className="table-cell flex gap-2">
@@ -82,7 +82,7 @@ function GestionEspecialidades() {
 
       {editando && (
         <div className="card mt-6">
-          <h3 className="font-semibold text-gray-700 mb-3">Editar especialidad</h3>
+          <h3 className="font-semibold text-slate-700 mb-3">Editar especialidad</h3>
           <div className="flex gap-3">
             <input className="input-field flex-1" value={editando.descripcion} onChange={e => setEditando(ed => ({ ...ed!, descripcion: e.target.value }))} />
             <button onClick={actualizar} className="btn-primary">Guardar</button>

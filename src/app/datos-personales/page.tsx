@@ -96,7 +96,15 @@ function DatosPersonales() {
     }
   };
 
-  if (loading) return <p className="text-center py-12 text-gray-500">Cargando datos...</p>;
+  if (loading) return (
+    <div className="flex items-center justify-center gap-3 py-12 text-slate-400">
+      <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+      </svg>
+      <span className="text-sm">Cargando datos...</span>
+    </div>
+  );
 
   return (
     <div className="max-w-lg mx-auto">
@@ -112,16 +120,16 @@ function DatosPersonales() {
         ].map(({ label, value }) => (
           <div key={label}>
             <label className="label-field">{label}</label>
-            <input type="text" className="input-field bg-gray-50 text-gray-500" value={value || ""} readOnly />
+            <input type="text" className="input-field bg-slate-50 text-slate-500" value={value || ""} readOnly />
           </div>
         ))}
 
         {/* Email — solo Admin puede modificar */}
         <div>
           <label className="label-field">Email</label>
-          <input type="email" className="input-field bg-gray-50 text-gray-500" value={usuario.email || ""} readOnly />
+          <input type="email" className="input-field bg-slate-50 text-slate-500" value={usuario.email || ""} readOnly />
           {editMode && (
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-slate-400 mt-1">
               {user?.rol === "Paciente"
                 ? "Para cambiar el email, hablá con la secretaría."
                 : "Para cambiar el email, contactá al administrador."}
@@ -162,8 +170,8 @@ function DatosPersonales() {
 
         {/* Cambio de contraseña */}
         {editMode && (
-          <div className="space-y-3 border-t border-gray-100 pt-4">
-            <p className="text-sm font-medium text-gray-600">Cambiar contraseña <span className="text-xs text-gray-400">(opcional)</span></p>
+          <div className="space-y-3 border-t border-slate-100 pt-4">
+            <p className="text-sm font-medium text-slate-600">Cambiar contraseña <span className="text-xs text-slate-400">(opcional)</span></p>
             <div>
               <label className="label-field">Contraseña actual</label>
               <input

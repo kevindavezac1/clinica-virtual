@@ -29,21 +29,17 @@ export default function MisTurnosPage() {
 
 function estadoBadge(estado?: string, sinRegistrar?: boolean) {
   if (sinRegistrar) {
-    return <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-400">Sin registrar</span>;
+    return <span className="badge badge-gray">Sin registrar</span>;
   }
   const map: Record<string, string> = {
-    Pendiente: "bg-yellow-100 text-yellow-800",
-    Confirmado: "bg-green-100 text-green-800",
-    Cancelado: "bg-red-100 text-red-700",
-    Realizado: "bg-teal-100 text-teal-800",
-    Ausente: "bg-orange-100 text-orange-700",
+    Pendiente: "badge-yellow",
+    Confirmado: "badge-green",
+    Cancelado: "badge-red",
+    Realizado: "badge-teal",
+    Ausente: "badge-orange",
   };
   const label = estado ?? "Pendiente";
-  return (
-    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${map[label] ?? "bg-gray-100 text-gray-600"}`}>
-      {label}
-    </span>
-  );
+  return <span className={`badge ${map[label] ?? "badge-gray"}`}>{label}</span>;
 }
 
 function MisTurnos() {
@@ -144,7 +140,15 @@ function MisTurnos() {
     }
   };
 
-  if (loading) return <p className="text-center py-12 text-gray-500">Cargando turnos...</p>;
+  if (loading) return (
+    <div className="flex items-center justify-center py-20 gap-3 text-slate-400">
+      <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+      </svg>
+      <span className="text-sm font-medium">Cargando turnos...</span>
+    </div>
+  );
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -153,13 +157,13 @@ function MisTurnos() {
       <div className="flex gap-2 mb-6">
         <button
           onClick={() => { setTab("proximos"); setFiltroEsp(""); setPaginaHistorial(1); }}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === "proximos" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+          className={tab === "proximos" ? "tab-active" : "tab-inactive"}
         >
           Próximos ({proximos.length})
         </button>
         <button
           onClick={() => { setTab("historial"); setFiltroEsp(""); setPaginaHistorial(1); }}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === "historial" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+          className={tab === "historial" ? "tab-active" : "tab-inactive"}
         >
           Historial ({historial.length})
         </button>
@@ -177,7 +181,7 @@ function MisTurnos() {
               {especialidades.map(e => <option key={e} value={e}>{e}</option>)}
             </select>
           )}
-          <label className="flex items-center gap-1.5 text-sm text-gray-500 cursor-pointer">
+          <label className="flex items-center gap-1.5 text-sm text-slate-500 cursor-pointer">
             <input
               type="checkbox"
               checked={mostrarCancelados}
@@ -190,7 +194,7 @@ function MisTurnos() {
       )}
 
       {lista.length === 0 ? (
-        <div className="card text-center text-gray-500 py-10">
+        <div className="card text-center text-slate-400 py-10">
           {tab === "proximos" ? "No tenés turnos próximos." : "No hay turnos en el historial."}
         </div>
       ) : (
@@ -198,11 +202,11 @@ function MisTurnos() {
           {lista.map(turno => (
             <li
               key={turno.id_turno}
-              className="card cursor-pointer hover:border-blue-300 transition-all"
+              className="card cursor-pointer hover:border-brand-200 hover:shadow-card-md transition-all"
               onClick={() => setSelected(selected?.id_turno === turno.id_turno ? null : turno)}
             >
               <div className="flex items-center justify-between">
-                <p className="font-semibold text-gray-800 capitalize">
+                <p className="font-semibold text-slate-800 capitalize">
                   {formatFecha(turno.fecha)} a las {turno.hora}
                 </p>
                 {estadoBadge(
@@ -211,18 +215,18 @@ function MisTurnos() {
                 )}
               </div>
               {tab === "historial" && (turno.estado === "Pendiente" || turno.estado === "Confirmado") && (
-                <p className="text-xs text-gray-400 mt-1">El médico aún no registró si el turno fue asistido o ausente.</p>
+                <p className="text-xs text-slate-400 mt-1">El médico aún no registró si el turno fue asistido o ausente.</p>
               )}
 
               {selected?.id_turno === turno.id_turno && (
-                <div className="mt-4 pt-4 border-t border-gray-100 space-y-1 text-sm text-gray-700">
+                <div className="mt-4 pt-4 border-t border-slate-100 space-y-1 text-sm text-slate-700">
                   <p><span className="font-medium">Especialista:</span> {turno.nombre_medico} {turno.apellido_medico}</p>
                   <p><span className="font-medium">Especialidad:</span> {turno.especialidad}</p>
                   {turno.nota && <p><span className="font-medium">Motivo de consulta:</span> {turno.nota}</p>}
                   {tab === "historial" && turno.nota_medico && (
-                    <div className="mt-2 p-3 bg-indigo-50 rounded-lg">
-                      <p className="text-xs font-semibold text-indigo-700 mb-1">Nota del médico</p>
-                      <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{turno.nota_medico}</p>
+                    <div className="mt-2 p-3 bg-brand-50 rounded-xl">
+                      <p className="text-xs font-semibold text-brand-700 mb-1">Nota del médico</p>
+                      <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{turno.nota_medico}</p>
                     </div>
                   )}
                   <div className="flex gap-3 mt-3 flex-wrap">
@@ -244,7 +248,7 @@ function MisTurnos() {
                     )}
                     <button
                       onClick={e => { e.stopPropagation(); setSelected(null); }}
-                      className="text-sm text-blue-600 hover:underline"
+                      className="text-sm text-brand-700 hover:underline"
                     >
                       Cerrar
                     </button>
@@ -257,7 +261,7 @@ function MisTurnos() {
       )}
 
       {tab === "historial" && totalPaginasHistorial > 1 && (
-        <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
+        <div className="flex items-center justify-between mt-4 text-sm text-slate-500">
           <button
             onClick={() => setPaginaHistorial(p => Math.max(1, p - 1))}
             disabled={paginaHistorial === 1}

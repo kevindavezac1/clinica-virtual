@@ -19,6 +19,13 @@ export default function ListarUsuariosPage() {
   );
 }
 
+const rolBadge: Record<string, string> = {
+  Paciente: "badge-teal",
+  Medico: "badge-blue",
+  Operador: "badge-purple",
+  Administrador: "badge-orange",
+};
+
 function ListarUsuarios() {
   const { token } = useAuth();
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -90,41 +97,47 @@ function ListarUsuarios() {
         {(busqueda || filtroRol) && (
           <button onClick={limpiarFiltros} className="btn-secondary whitespace-nowrap">Limpiar</button>
         )}
-        <span className="text-sm text-gray-400 whitespace-nowrap">{filtrados.length} resultado{filtrados.length !== 1 ? "s" : ""}</span>
+        <span className="text-sm text-slate-400 whitespace-nowrap">{filtrados.length} resultado{filtrados.length !== 1 ? "s" : ""}</span>
       </div>
 
-      <div className="overflow-x-auto rounded-xl shadow-sm border border-gray-100">
+      <div className="overflow-x-auto rounded-xl border border-slate-200">
         <table className="w-full text-sm">
           <thead>
             <tr>
-              {["ID","Nombre","Apellido","DNI","Rol","Cobertura","Teléfono","Email","Email ✓","Datos ✓","Acciones"].map(col => (
+              {["Usuario","DNI","Rol","Cobertura","Email","Verificaciones","Acciones"].map(col => (
                 <th key={col} className="table-header">{col}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {paginados.map(u => (
-              <tr key={u.id} className="hover:bg-gray-50">
-                <td className="table-cell">{u.id}</td>
-                <td className="table-cell">{u.nombre}</td>
-                <td className="table-cell">{u.apellido}</td>
-                <td className="table-cell">{u.dni}</td>
-                <td className="table-cell"><span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-medium">{u.rol}</span></td>
+              <tr key={u.id} className="hover:bg-slate-50 transition-colors">
+                <td className="table-cell">
+                  <span className="font-medium text-slate-800">{u.apellido}, {u.nombre}</span>
+                  <span className="block text-xs text-slate-400">{u.telefono}</span>
+                </td>
+                <td className="table-cell font-mono">{u.dni}</td>
+                <td className="table-cell"><span className={`badge ${rolBadge[u.rol] ?? "badge-gray"}`}>{u.rol}</span></td>
                 <td className="table-cell">{u.rol === "Paciente" ? u.nombre_cobertura : "—"}</td>
-                <td className="table-cell">{u.telefono}</td>
-                <td className="table-cell">{u.email}</td>
-                <td className="table-cell">
-                  {u.email_verificado
-                    ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Sí</span>
-                    : <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">No</span>}
+                <td className="table-cell max-w-[200px]">
+                  <span className="block truncate" title={u.email}>{u.email}</span>
                 </td>
                 <td className="table-cell">
-                  {u.datos_verificados
-                    ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Sí</span>
-                    : <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-medium">No</span>}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-1.5">
+                      {u.email_verificado
+                        ? <span className="badge badge-green">Email ✓</span>
+                        : <span className="badge badge-red">Email ✗</span>}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {u.datos_verificados
+                        ? <span className="badge badge-green">Datos ✓</span>
+                        : <span className="badge badge-yellow">Sin verificar</span>}
+                    </div>
+                  </div>
                 </td>
                 <td className="table-cell">
-                  <button onClick={() => setEditando({ ...u })} className="text-blue-600 hover:underline text-xs">Editar</button>
+                  <button onClick={() => setEditando({ ...u })} className="text-brand-700 hover:text-brand-900 font-medium text-xs transition-colors">Editar</button>
                 </td>
               </tr>
             ))}
@@ -133,7 +146,7 @@ function ListarUsuarios() {
       </div>
 
       {totalPaginas > 1 && (
-        <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
+        <div className="flex items-center justify-between mt-4 text-sm text-slate-500">
           <button
             onClick={() => setPagina(p => Math.max(1, p - 1))}
             disabled={pagina === 1}
@@ -153,8 +166,8 @@ function ListarUsuarios() {
       )}
 
       {editando && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-card-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-bold mb-4">Editar Usuario</h2>
             <div className="space-y-3">
               {[
@@ -184,16 +197,16 @@ function ListarUsuarios() {
                     }}
                   />
                   {key === "telefono" && (
-                    <p className="text-xs text-gray-400 mt-1">Sin 0 ni 15 (ej: 3496500494)</p>
+                    <p className="text-xs text-slate-400 mt-1">Sin 0 ni 15 (ej: 3496500494)</p>
                   )}
                   {key === "dni" && (
-                    <p className="text-xs text-gray-400 mt-1">7 u 8 dígitos</p>
+                    <p className="text-xs text-slate-400 mt-1">7 u 8 dígitos</p>
                   )}
                 </div>
               ))}
               <div>
                 <label className="label-field">Rol</label>
-                <input className="input-field bg-gray-50" value={editando.rol} readOnly />
+                <input className="input-field bg-slate-50 text-slate-500" value={editando.rol} readOnly />
               </div>
               <div className="flex items-center gap-3 pt-1">
                 <input
@@ -203,7 +216,7 @@ function ListarUsuarios() {
                   onChange={e => setEditando(ed => ({ ...ed!, datos_verificados: e.target.checked }))}
                   className="w-4 h-4 accent-brand-700"
                 />
-                <label htmlFor="datos_verificados" className="text-sm text-gray-700 select-none cursor-pointer">
+                <label htmlFor="datos_verificados" className="text-sm text-slate-700 select-none cursor-pointer">
                   Datos verificados en persona
                 </label>
               </div>

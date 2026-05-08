@@ -78,13 +78,13 @@ function GestionFeriados() {
   return (
     <div className="max-w-2xl mx-auto">
       <h1 className="page-title">Días No Laborables</h1>
-      <p className="text-sm text-gray-500 mb-6">
+      <p className="text-sm text-slate-500 mb-6">
         Los feriados nacionales se cargan automáticamente. Agregá cierres especiales del consultorio (vacaciones, refacciones, etc.).
       </p>
 
       {/* Agregar cierre especial */}
       <form onSubmit={agregar} className="card mb-6">
-        <p className="text-sm font-semibold text-gray-700 mb-3">Agregar cierre especial</p>
+        <p className="text-sm font-semibold text-slate-700 mb-3">Agregar cierre especial</p>
         <div className="flex gap-3">
           <div className="shrink-0">
             <input
@@ -113,20 +113,26 @@ function GestionFeriados() {
       </form>
 
       {loading ? (
-        <p className="text-gray-400 text-sm">Cargando...</p>
+        <div className="flex items-center gap-3 py-6 text-slate-400">
+          <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          <span className="text-sm">Cargando...</span>
+        </div>
       ) : (
         <div className="space-y-6">
           {/* Cierres especiales */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
               Cierres especiales ({locales.length})
             </p>
             {locales.length === 0 ? (
-              <div className="card text-center py-6 text-gray-400 text-sm">
+              <div className="card text-center py-6 text-slate-400 text-sm">
                 No hay cierres especiales cargados.
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-xl shadow-sm border border-gray-100">
+              <div className="overflow-x-auto rounded-xl shadow-sm border border-slate-200">
                 <table className="w-full text-sm">
                   <thead>
                     <tr>
@@ -137,11 +143,11 @@ function GestionFeriados() {
                   </thead>
                   <tbody>
                     {locales.map(f => (
-                      <tr key={f.id} className="hover:bg-gray-50">
+                      <tr key={f.id} className="hover:bg-slate-50 transition-colors">
                         <td className="table-cell font-mono text-xs whitespace-nowrap capitalize">{formatFecha(f.fecha)}</td>
                         <td className="table-cell">{f.descripcion}</td>
                         <td className="table-cell">
-                          <button onClick={() => eliminar(f.id!)} className="text-red-500 hover:underline text-xs">
+                          <button onClick={() => eliminar(f.id!)} className="text-red-500 hover:text-red-700 text-xs font-medium transition-colors">
                             Eliminar
                           </button>
                         </td>
@@ -155,10 +161,10 @@ function GestionFeriados() {
 
           {/* Feriados nacionales (solo lectura) */}
           <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">
               Feriados nacionales 2025–2026 (automáticos)
             </p>
-            <div className="overflow-x-auto rounded-xl shadow-sm border border-gray-100 opacity-70">
+            <div className="overflow-x-auto rounded-xl shadow-sm border border-slate-200 opacity-70">
               <table className="w-full text-sm">
                 <thead>
                   <tr>
@@ -168,7 +174,7 @@ function GestionFeriados() {
                 </thead>
                 <tbody>
                   {nacionales.map(f => (
-                    <tr key={f.fecha} className="hover:bg-gray-50">
+                    <tr key={f.fecha} className="hover:bg-slate-50 transition-colors">
                       <td className="table-cell font-mono text-xs whitespace-nowrap capitalize">{formatFecha(f.fecha)}</td>
                       <td className="table-cell">{f.descripcion}</td>
                     </tr>

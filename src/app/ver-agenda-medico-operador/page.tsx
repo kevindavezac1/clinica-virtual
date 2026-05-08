@@ -50,17 +50,13 @@ function weekLabel(monday: Date): string {
 
 function estadoBadge(estado: string) {
   const map: Record<string, string> = {
-    Pendiente: "bg-yellow-100 text-yellow-800",
-    Confirmado: "bg-green-100 text-green-800",
-    Cancelado: "bg-red-100 text-red-700",
-    Realizado: "bg-teal-100 text-teal-800",
-    Ausente: "bg-orange-100 text-orange-700",
+    Pendiente: "badge-yellow",
+    Confirmado: "badge-green",
+    Cancelado: "badge-red",
+    Realizado: "badge-teal",
+    Ausente: "badge-orange",
   };
-  return (
-    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${map[estado] ?? "bg-gray-100 text-gray-600"}`}>
-      {estado}
-    </span>
-  );
+  return <span className={`badge ${map[estado] ?? "badge-gray"}`}>{estado}</span>;
 }
 
 export default function VerAgendaOperadorPage() {
@@ -259,7 +255,7 @@ function VerAgendaOperador() {
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-3">
           <button onClick={prevWeek} className="btn-secondary px-3 py-1.5 text-sm">← Anterior</button>
-          <span className="font-medium text-gray-700 capitalize">{weekLabel(weekStart)}</span>
+          <span className="font-medium text-slate-700 capitalize">{weekLabel(weekStart)}</span>
           <button onClick={nextWeek} className="btn-secondary px-3 py-1.5 text-sm">Siguiente →</button>
         </div>
         <div className="grid grid-cols-7 gap-2">
@@ -274,10 +270,10 @@ function VerAgendaOperador() {
                 onClick={() => setFecha(ds)}
                 className={`rounded-xl p-2 text-center border transition-all ${
                   isSelected
-                    ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                    ? "bg-brand-700 text-white border-brand-700 shadow-sm"
                     : isToday
-                      ? "bg-blue-50 border-blue-300 text-blue-700"
-                      : "bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:bg-gray-50"
+                      ? "bg-brand-50 border-brand-200 text-brand-700"
+                      : "bg-white border-slate-200 text-slate-600 hover:border-brand-200 hover:bg-slate-50"
                 }`}
               >
                 <p className="text-xs font-medium">{DIAS[i]}</p>
@@ -285,11 +281,11 @@ function VerAgendaOperador() {
                 {count === undefined ? (
                   <p className="text-xs mt-1 opacity-40">…</p>
                 ) : count > 0 ? (
-                  <p className={`text-xs mt-1 font-medium ${isSelected ? "text-blue-100" : "text-blue-600"}`}>
+                  <p className={`text-xs mt-1 font-medium ${isSelected ? "text-white/80" : "text-brand-600"}`}>
                     {count} {count === 1 ? "turno" : "turnos"}
                   </p>
                 ) : (
-                  <p className={`text-xs mt-1 ${isSelected ? "text-blue-300" : "text-gray-300"}`}>libre</p>
+                  <p className={`text-xs mt-1 ${isSelected ? "text-brand-300" : "text-slate-300"}`}>libre</p>
                 )}
               </button>
             );
@@ -299,7 +295,7 @@ function VerAgendaOperador() {
 
       {/* Búsqueda y estado dentro del día */}
       <div className="card mb-5 flex flex-wrap gap-3 items-center">
-        <span className="text-sm font-medium text-gray-500 capitalize">{labelDia}</span>
+        <span className="text-sm font-medium text-slate-500 capitalize">{labelDia}</span>
         <input
           className="input-field flex-1 min-w-[200px]"
           placeholder="Buscar paciente, médico o especialidad..."
@@ -312,7 +308,7 @@ function VerAgendaOperador() {
             <option key={e} value={e}>{e}</option>
           ))}
         </select>
-        <label className="flex items-center gap-1.5 text-sm text-gray-500 cursor-pointer whitespace-nowrap">
+        <label className="flex items-center gap-1.5 text-sm text-slate-500 cursor-pointer whitespace-nowrap">
           <input
             type="checkbox"
             checked={mostrarCancelados}
@@ -321,11 +317,19 @@ function VerAgendaOperador() {
           />
           Ver cancelados
         </label>
-        <span className="text-sm text-gray-400 whitespace-nowrap">{filtrados.length} turno{filtrados.length !== 1 ? "s" : ""}</span>
+        <span className="text-sm text-slate-400 whitespace-nowrap">{filtrados.length} turno{filtrados.length !== 1 ? "s" : ""}</span>
       </div>
 
-      {loading ? <p className="text-gray-500">Cargando...</p> : (
-        <div className="overflow-x-auto rounded-xl shadow-sm border border-gray-100">
+      {loading ? (
+        <div className="flex items-center gap-3 py-8 text-slate-400">
+          <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          <span className="text-sm">Cargando...</span>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-slate-200">
           <table className="w-full text-sm">
             <thead>
               <tr>
@@ -340,9 +344,9 @@ function VerAgendaOperador() {
             </thead>
             <tbody>
               {filtrados.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-8 text-gray-400">No hay turnos para esta fecha</td></tr>
+                <tr><td colSpan={7} className="text-center py-8 text-slate-400">No hay turnos para esta fecha</td></tr>
               ) : filtrados.map(t => (
-                <tr key={t.id_turno} className="hover:bg-gray-50">
+                <tr key={t.id_turno} className="hover:bg-slate-50 transition-colors">
                   <td className="table-cell font-mono">{t.hora}</td>
                   <td className="table-cell">{t.nombre_medico}</td>
                   <td className="table-cell">{t.especialidad}</td>
@@ -355,7 +359,7 @@ function VerAgendaOperador() {
                         <button
                           onClick={() => cambiarEstado(t.id_turno, "Confirmado")}
                           disabled={confirmando === t.id_turno}
-                          className="text-xs text-green-700 hover:underline disabled:opacity-50"
+                          className="text-xs text-green-700 font-medium hover:underline disabled:opacity-50"
                         >
                           {confirmando === t.id_turno ? "..." : "Confirmar"}
                         </button>
@@ -364,7 +368,7 @@ function VerAgendaOperador() {
                         <button
                           onClick={() => cambiarEstado(t.id_turno, "Cancelado")}
                           disabled={cancelando === t.id_turno}
-                          className="text-xs text-red-600 hover:underline disabled:opacity-50"
+                          className="text-xs text-red-600 font-medium hover:underline disabled:opacity-50"
                         >
                           {cancelando === t.id_turno ? "..." : "Cancelar"}
                         </button>

@@ -120,7 +120,7 @@ function GestionPacientes() {
           value={busqueda}
           onChange={e => { setBusqueda(e.target.value); setPagina(1); }}
         />
-        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer select-none whitespace-nowrap">
+        <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none whitespace-nowrap">
           <input
             type="checkbox"
             checked={soloSinVerificar}
@@ -129,18 +129,18 @@ function GestionPacientes() {
           />
           Solo sin verificar
         </label>
-        <span className="text-sm text-gray-400 whitespace-nowrap">
+        <span className="text-sm text-slate-400 whitespace-nowrap">
           {filtrados.length} paciente{filtrados.length !== 1 ? "s" : ""}
           {soloSinVerificar && ` sin verificar`}
         </span>
       </div>
 
       {/* Tabla */}
-      <div className="overflow-x-auto rounded-xl shadow-sm border border-gray-100">
+      <div className="overflow-x-auto rounded-xl border border-slate-200">
         <table className="w-full text-sm">
           <thead>
             <tr>
-              {["Nombre", "Apellido", "DNI", "Cobertura", "Teléfono", "Email ✓", "Datos ✓", "Acciones"].map(col => (
+              {["Paciente", "DNI", "Cobertura", "Teléfono", "Verificaciones", "Acciones"].map(col => (
                 <th key={col} className="table-header">{col}</th>
               ))}
             </tr>
@@ -148,29 +148,28 @@ function GestionPacientes() {
           <tbody>
             {paginados.length === 0 ? (
               <tr>
-                <td colSpan={8} className="text-center py-8 text-gray-400 text-sm">
+                <td colSpan={6} className="text-center py-8 text-slate-400 text-sm">
                   {soloSinVerificar ? "Todos los pacientes están verificados." : "No hay pacientes registrados."}
                 </td>
               </tr>
             ) : paginados.map(p => (
-              <tr key={p.id} className="hover:bg-gray-50">
-                <td className="table-cell font-medium">{p.nombre}</td>
-                <td className="table-cell">{p.apellido}</td>
-                <td className="table-cell">{p.dni}</td>
+              <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                <td className="table-cell font-medium">{p.apellido}, {p.nombre}</td>
+                <td className="table-cell font-mono">{p.dni}</td>
                 <td className="table-cell">{p.nombre_cobertura ?? "—"}</td>
                 <td className="table-cell">{p.telefono}</td>
                 <td className="table-cell">
-                  {p.email_verificado
-                    ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Sí</span>
-                    : <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">No</span>}
+                  <div className="flex flex-col gap-1">
+                    {p.email_verificado
+                      ? <span className="badge badge-green">Email ✓</span>
+                      : <span className="badge badge-red">Email ✗</span>}
+                    {p.datos_verificados
+                      ? <span className="badge badge-green">Datos ✓</span>
+                      : <span className="badge badge-yellow">Sin verificar</span>}
+                  </div>
                 </td>
                 <td className="table-cell">
-                  {p.datos_verificados
-                    ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Verificado</span>
-                    : <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-medium">Pendiente</span>}
-                </td>
-                <td className="table-cell">
-                  <button onClick={() => abrirEdicion(p)} className="text-blue-600 hover:underline text-xs font-medium">
+                  <button onClick={() => abrirEdicion(p)} className="text-brand-700 hover:text-brand-900 text-xs font-medium transition-colors">
                     Editar
                   </button>
                 </td>
@@ -182,7 +181,7 @@ function GestionPacientes() {
 
       {/* Paginación */}
       {totalPaginas > 1 && (
-        <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
+        <div className="flex items-center justify-between mt-4 text-sm text-slate-500">
           <button onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={pagina === 1} className="btn-secondary disabled:opacity-40">
             ← Anterior
           </button>
@@ -195,10 +194,10 @@ function GestionPacientes() {
 
       {/* Modal de edición */}
       {editando && form && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-card-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-bold mb-1">Editar paciente</h2>
-            <p className="text-sm text-gray-400 mb-4">{editando.apellido}, {editando.nombre}</p>
+            <p className="text-sm text-slate-400 mb-4">{editando.apellido}, {editando.nombre}</p>
             <div className="space-y-3">
               {[
                 { label: "Nombre", key: "nombre" },
@@ -224,7 +223,7 @@ function GestionPacientes() {
                   maxLength={8}
                   onChange={e => setForm(f => ({ ...f!, dni: e.target.value.replace(/\D/g, "").slice(0, 8) }))}
                 />
-                <p className="text-xs text-gray-400 mt-1">7 u 8 dígitos</p>
+                <p className="text-xs text-slate-400 mt-1">7 u 8 dígitos</p>
               </div>
               <div>
                 <label className="label-field">Teléfono</label>
@@ -236,7 +235,7 @@ function GestionPacientes() {
                   maxLength={10}
                   onChange={e => setForm(f => ({ ...f!, telefono: e.target.value.replace(/\D/g, "").slice(0, 10) }))}
                 />
-                <p className="text-xs text-gray-400 mt-1">Sin 0 ni 15 (ej: 3496500494)</p>
+                <p className="text-xs text-slate-400 mt-1">Sin 0 ni 15 (ej: 3496500494)</p>
               </div>
               <div>
                 <label className="label-field">Fecha de nacimiento</label>
@@ -259,7 +258,7 @@ function GestionPacientes() {
                   {coberturas.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                 </select>
               </div>
-              <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
+              <div className="flex items-center gap-3 pt-2 border-t border-slate-100">
                 <input
                   type="checkbox"
                   id="datos_verificados_modal"
@@ -267,7 +266,7 @@ function GestionPacientes() {
                   onChange={e => setForm(f => ({ ...f!, datos_verificados: e.target.checked }))}
                   className="w-4 h-4 accent-brand-700"
                 />
-                <label htmlFor="datos_verificados_modal" className="text-sm text-gray-700 select-none cursor-pointer">
+                <label htmlFor="datos_verificados_modal" className="text-sm text-slate-700 select-none cursor-pointer">
                   Datos verificados en persona
                 </label>
               </div>

@@ -55,7 +55,7 @@ function LoginForm() {
           <p className="text-slate-500 text-sm mt-1">Ingresá a tu cuenta para continuar</p>
         </div>
 
-        <div className="card shadow-card">
+        <div className="card shadow-card-lg">
           {resetOk && (
             <div className="mb-5 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-green-700 text-sm text-center">
               Contraseña actualizada. Podés ingresar con tu nueva contraseña.

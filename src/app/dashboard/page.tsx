@@ -25,13 +25,13 @@ export default function DashboardPage() {
 function StatCard({ label, value, sub, icon }: { label: string; value: number | string; sub?: string; icon: React.ReactNode }) {
   return (
     <div className="card flex items-start gap-4">
-      <div className="w-10 h-10 rounded-lg bg-brand-50 text-brand-700 flex items-center justify-center shrink-0 mt-0.5">
+      <div className="w-11 h-11 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center shrink-0">
         {icon}
       </div>
       <div>
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-0.5">{label}</p>
+        <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-0.5">{label}</p>
         <p className="text-2xl font-bold text-slate-800 leading-none">{value}</p>
-        {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+        {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
       </div>
     </div>
   );
@@ -61,8 +61,16 @@ function Dashboard() {
     });
   };
 
-  if (loading) return <p className="text-center py-16 text-gray-400">Cargando métricas...</p>;
-  if (!data) return <p className="text-center py-16 text-red-400">Error al cargar el dashboard</p>;
+  if (loading) return (
+    <div className="flex items-center justify-center py-24 gap-3 text-slate-400">
+      <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+      </svg>
+      <span className="text-sm font-medium">Cargando métricas...</span>
+    </div>
+  );
+  if (!data) return <p className="text-center py-16 text-red-500 text-sm">Error al cargar el dashboard.</p>;
 
   const maxProx = Math.max(...data.proximos7.map(d => d.cantidad), 1);
   const tasaCancelacion = data.turnosMes.total > 0
@@ -77,7 +85,7 @@ function Dashboard() {
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="page-title mb-0">Dashboard</h1>
-        <span className="text-sm text-gray-400 capitalize">{mesActual}</span>
+        <span className="text-sm text-slate-400 capitalize">{mesActual}</span>
       </div>
 
       {/* KPIs principales */}
@@ -97,7 +105,7 @@ function Dashboard() {
 
         {/* Estados */}
         <div className="card">
-          <h2 className="font-semibold text-gray-700 mb-4">Estados — {mesActual}</h2>
+          <h2 className="font-semibold text-slate-700 mb-4">Estados — {mesActual}</h2>
           <div className="space-y-3">
             {[
               { label: "Pendientes", value: data.turnosMes.pendientes, color: "bg-yellow-400" },
@@ -108,16 +116,16 @@ function Dashboard() {
             ].map(({ label, value, color }) => (
               <div key={label}>
                 <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600">{label}</span>
-                  <span className="font-semibold text-gray-800">{value}</span>
+                  <span className="text-slate-600">{label}</span>
+                  <span className="font-semibold text-slate-800">{value}</span>
                 </div>
-                <div className="w-full bg-gray-100 rounded-full h-2">
-                  <div className={`${color} h-2 rounded-full transition-all`} style={{ width: data.turnosMes.total > 0 ? `${Math.round((value / data.turnosMes.total) * 100)}%` : "0%" }} />
+                <div className="w-full bg-slate-100 rounded-full h-2.5">
+                  <div className={`${color} h-2.5 rounded-full transition-all`} style={{ width: data.turnosMes.total > 0 ? `${Math.round((value / data.turnosMes.total) * 100)}%` : "0%" }} />
                 </div>
               </div>
             ))}
             <div className="flex gap-4 mt-2">
-              {tasaCancelacion > 0 && <p className="text-xs text-gray-400">Cancelación: {tasaCancelacion}%</p>}
+              {tasaCancelacion > 0 && <p className="text-xs text-slate-400">Cancelación: {tasaCancelacion}%</p>}
               {tasaAsistencia !== null && <p className="text-xs text-teal-600 font-medium">Asistencia: {tasaAsistencia}%</p>}
             </div>
           </div>
@@ -125,21 +133,21 @@ function Dashboard() {
 
         {/* Top especialidades */}
         <div className="card">
-          <h2 className="font-semibold text-gray-700 mb-4">Especialidades más demandadas</h2>
+          <h2 className="font-semibold text-slate-700 mb-4">Especialidades más demandadas</h2>
           {data.topEspecialidades.length === 0 ? (
-            <p className="text-sm text-gray-400">Sin datos este mes</p>
+            <p className="text-sm text-slate-400">Sin datos este mes</p>
           ) : (
             <div className="space-y-3">
               {data.topEspecialidades.map(({ nombre, cantidad }, i) => (
                 <div key={nombre} className="flex items-center gap-3">
-                  <span className="text-xs font-bold text-gray-400 w-4">{i + 1}</span>
+                  <span className="text-xs font-bold text-slate-400 w-4">{i + 1}</span>
                   <div className="flex-1">
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-700 truncate">{nombre}</span>
-                      <span className="font-semibold text-gray-800 ml-2">{cantidad}</span>
+                      <span className="text-slate-700 truncate">{nombre}</span>
+                      <span className="font-semibold text-slate-800 ml-2">{cantidad}</span>
                     </div>
-                    <div className="w-full bg-gray-100 rounded-full h-1.5">
-                      <div className="bg-indigo-400 h-1.5 rounded-full" style={{ width: `${Math.round((cantidad / data.topEspecialidades[0].cantidad) * 100)}%` }} />
+                    <div className="w-full bg-slate-100 rounded-full h-1.5">
+                      <div className="bg-brand-500 h-1.5 rounded-full" style={{ width: `${Math.round((cantidad / data.topEspecialidades[0].cantidad) * 100)}%` }} />
                     </div>
                   </div>
                 </div>
@@ -151,9 +159,9 @@ function Dashboard() {
 
       {/* Próximos 7 días */}
       <div className="card mb-6">
-        <h2 className="font-semibold text-gray-700 mb-5">Turnos — próximos 7 días</h2>
+        <h2 className="font-semibold text-slate-700 mb-5">Turnos — próximos 7 días</h2>
         {data.proximos7.length === 0 ? (
-          <p className="text-sm text-gray-400">No hay turnos programados</p>
+          <p className="text-sm text-slate-400">No hay turnos programados</p>
         ) : (
           <div className="flex items-end gap-1.5" style={{ height: "120px" }}>
             {data.proximos7.map(({ fecha, cantidad }) => {
@@ -170,7 +178,7 @@ function Dashboard() {
                       style={{ height: cantidad > 0 ? `${Math.max(pct * 0.72, 4)}px` : "2px", opacity: cantidad > 0 ? 1 : 0.3 }}
                     />
                   </div>
-                  <span className="text-xs text-gray-400 text-center capitalize leading-tight w-full truncate px-0.5">
+                  <span className="text-xs text-slate-400 text-center capitalize leading-tight w-full truncate px-0.5">
                     {formatFecha(fecha)}
                   </span>
                 </div>

@@ -131,12 +131,10 @@ function GestionAgenda() {
     const tieneSemana = diasSel.some(d => d >= 1 && d <= 5);
 
     if (tieneSab && !tieneSemana) {
-      // Solo sábados: validar con límite 13:00
       const err = validar(rEntrada, rSalida, true);
       if (err) { toast(err, "warning"); return; }
     }
     if (tieneSemana) {
-      // Semana (con o sin sábado): validar con límite 20:00. El sábado se autocapea a 13:00
       const err = validar(rEntrada, rSalida, false);
       if (err) { toast(err, "warning"); return; }
     }
@@ -248,12 +246,12 @@ function GestionAgenda() {
         <div className="flex gap-2 mb-2">
           {(["rango", "dia"] as const).map(m => (
             <button key={m} onClick={() => setModo(m)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${modo === m ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+              className={modo === m ? "tab-active" : "tab-inactive"}>
               {m === "rango" ? "Carga por período" : "Día suelto"}
             </button>
           ))}
         </div>
-        <p className="text-xs text-gray-400 mb-5">
+        <p className="text-xs text-slate-400 mb-5">
           {modo === "rango"
             ? "Generá varios días de una vez eligiendo un período y qué días de la semana trabajás."
             : "Agregá un día puntual, por ejemplo una guardia o fecha especial."}
@@ -264,7 +262,7 @@ function GestionAgenda() {
 
             {/* Paso 1: Período */}
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">1 · Período</p>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">1 · Período</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="label-field">Desde</label>
@@ -279,15 +277,15 @@ function GestionAgenda() {
 
             {/* Paso 2: Días de la semana */}
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">2 · Días que trabajás</p>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">2 · Días que trabajás</p>
               <div className="flex gap-2 flex-wrap">
                 {DIAS.map(d => (
                   <button key={d.key} type="button"
                     onClick={() => setDiasSel(prev => prev.includes(d.key) ? prev.filter(x => x !== d.key) : [...prev, d.key])}
                     className={`w-12 h-12 rounded-xl text-sm font-bold transition-colors border-2 ${
                       diasSel.includes(d.key)
-                        ? d.key === 6 ? "bg-orange-500 border-orange-500 text-white" : "bg-blue-600 border-blue-600 text-white"
-                        : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
+                        ? d.key === 6 ? "bg-orange-500 border-orange-500 text-white" : "bg-brand-700 border-brand-700 text-white"
+                        : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
                     }`}>
                     {d.label}
                   </button>
@@ -304,7 +302,7 @@ function GestionAgenda() {
 
             {/* Paso 3: Horarios */}
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">3 · Horario</p>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">3 · Horario</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="label-field">Entrada</label>
@@ -327,12 +325,12 @@ function GestionAgenda() {
 
             {/* Paso 4: Duración */}
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">4 · Duración de cada turno</p>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">4 · Duración de cada turno</p>
               <div className="flex gap-2 flex-wrap">
                 {DURACIONES.map(d => (
                   <button key={d} type="button" onClick={() => setDuracion(d)}
                     className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors border-2 ${
-                      duracion === d ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
+                      duracion === d ? "bg-brand-700 border-brand-700 text-white" : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
                     }`}>
                     {d} min
                   </button>
@@ -342,7 +340,7 @@ function GestionAgenda() {
 
             {/* Preview */}
             {preview.length > 0 && (
-              <div className={`rounded-lg px-4 py-3 text-sm ${incSabYSem ? "bg-orange-50 text-orange-800" : "bg-blue-50 text-blue-800"}`}>
+              <div className={`rounded-lg px-4 py-3 text-sm ${incSabYSem ? "bg-orange-50 text-orange-800" : "bg-brand-50 text-brand-700"}`}>
                 <p className="font-semibold mb-2">
                   Se generarán <strong>{preview.length} días</strong>
                   {incSabYSem && " (sábados ajustados a 13:00)"}
@@ -352,7 +350,7 @@ function GestionAgenda() {
                     <li key={f} className="capitalize">{formatDiaFecha(f)}</li>
                   ))}
                   {preview.length > 5 && (
-                    <li className="text-gray-400">y {preview.length - 5} días más…</li>
+                    <li className="text-slate-400">y {preview.length - 5} días más…</li>
                   )}
                 </ul>
               </div>
@@ -369,11 +367,11 @@ function GestionAgenda() {
 
             {/* Fecha */}
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">1 · Fecha</p>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">1 · Fecha</p>
               <input type="date" className="input-field max-w-xs" value={dFecha} min={hoy}
                 onChange={e => { setDFecha(e.target.value); setDEntrada(""); setDSalida(""); }} />
               {dFecha && (
-                <p className="text-sm text-gray-600 mt-1 capitalize font-medium">{formatDiaFecha(dFecha)}</p>
+                <p className="text-sm text-slate-600 mt-1 capitalize font-medium">{formatDiaFecha(dFecha)}</p>
               )}
               {fechaYaTieneAgenda(dFecha) && (
                 <div className="flex items-start gap-2 text-amber-800 bg-amber-50 border border-amber-200 text-xs rounded-lg px-3 py-2 mt-2">
@@ -385,7 +383,7 @@ function GestionAgenda() {
 
             {/* Horario */}
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">2 · Horario</p>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">2 · Horario</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="label-field">Entrada</label>
@@ -408,12 +406,12 @@ function GestionAgenda() {
 
             {/* Duración */}
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">3 · Duración de cada turno</p>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">3 · Duración de cada turno</p>
               <div className="flex gap-2 flex-wrap">
                 {DURACIONES.map(d => (
                   <button key={d} type="button" onClick={() => setDuracion(d)}
                     className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors border-2 ${
-                      duracion === d ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
+                      duracion === d ? "bg-brand-700 border-brand-700 text-white" : "bg-white border-slate-200 text-slate-500 hover:border-slate-300"
                     }`}>
                     {d} min
                   </button>
@@ -431,27 +429,33 @@ function GestionAgenda() {
       {/* Vista mensual */}
       <div className="card">
         <div className="flex items-center justify-between mb-1">
-          <button onClick={() => navMes(-1)} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-600 font-bold">‹</button>
-          <h2 className="font-semibold text-gray-800 capitalize">{formatMes(mesVista)}</h2>
-          <button onClick={() => navMes(1)} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-600 font-bold">›</button>
+          <button onClick={() => navMes(-1)} className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-600 font-bold transition-colors">‹</button>
+          <h2 className="font-semibold text-slate-800 capitalize">{formatMes(mesVista)}</h2>
+          <button onClick={() => navMes(1)} className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-600 font-bold transition-colors">›</button>
         </div>
-        <p className="text-xs text-center text-gray-400 mb-4">
+        <p className="text-xs text-center text-slate-400 mb-4">
           {agendaMes.length === 0 ? "Sin días cargados" : `${agendaMes.length} día${agendaMes.length !== 1 ? "s" : ""} cargado${agendaMes.length !== 1 ? "s" : ""}`}
         </p>
 
         {loadingMes ? (
-          <p className="text-gray-400 text-sm text-center py-6">Cargando...</p>
+          <div className="flex items-center justify-center gap-2 py-6 text-slate-400">
+            <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            <span className="text-sm">Cargando...</span>
+          </div>
         ) : agendaMes.length === 0 ? (
-          <p className="text-gray-400 text-sm text-center py-6">No hay agenda cargada para este mes</p>
+          <p className="text-slate-400 text-sm text-center py-6">No hay agenda cargada para este mes</p>
         ) : (
-          <ul className="divide-y divide-gray-100">
+          <ul className="divide-y divide-slate-100">
             {agendaMes.map(a => (
-              <li key={a.id} className="flex items-center justify-between py-2.5 px-1 hover:bg-gray-50 rounded-lg">
+              <li key={a.id} className="flex items-center justify-between py-2.5 px-1 hover:bg-slate-50 rounded-lg transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className={`w-2 h-2 rounded-full ${esSabado(a.fecha) ? "bg-orange-400" : "bg-blue-400"}`} />
-                  <span className="text-sm text-gray-800 capitalize">{formatFecha(a.fecha)}</span>
-                  <span className="text-sm text-gray-500 font-mono">{a.hora_entrada} – {a.hora_salida}</span>
-                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{a.duracion} min</span>
+                  <div className={`w-2 h-2 rounded-full ${esSabado(a.fecha) ? "bg-orange-400" : "bg-brand-400"}`} />
+                  <span className="text-sm text-slate-800 capitalize">{formatFecha(a.fecha)}</span>
+                  <span className="text-sm text-slate-500 font-mono">{a.hora_entrada} – {a.hora_salida}</span>
+                  <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{a.duracion} min</span>
                   {a.turnosActivos > 0 && (
                     <span className="text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
                       {a.turnosActivos} turno{a.turnosActivos !== 1 ? "s" : ""}
@@ -460,7 +464,7 @@ function GestionAgenda() {
                 </div>
                 <button
                   onClick={() => setConfirmDelete({ id: a.id, turnosActivos: a.turnosActivos })}
-                  className="text-xs text-red-500 hover:text-red-700 hover:underline px-2"
+                  className="text-xs text-red-500 hover:text-red-700 font-medium transition-colors px-2"
                 >
                   {a.turnosActivos > 0 ? "Cancelar día" : "Eliminar"}
                 </button>

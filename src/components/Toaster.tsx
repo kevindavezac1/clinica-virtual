@@ -22,6 +22,12 @@ const icons = {
   ),
 };
 
+const borderAccent: Record<string, string> = {
+  success: "border-l-emerald-400",
+  error: "border-l-red-400",
+  warning: "border-l-amber-400",
+};
+
 export default function Toaster() {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -39,7 +45,7 @@ export default function Toaster() {
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
       {toasts.map(t => (
-        <div key={t.id} className="bg-white border border-slate-200 rounded-xl shadow-lg px-4 py-3 flex items-center gap-3 pointer-events-auto animate-in slide-in-from-bottom-2">
+        <div key={t.id} className={`bg-white border border-slate-100 border-l-4 ${borderAccent[t.type]} rounded-xl shadow-card-md px-4 py-3 flex items-center gap-3 pointer-events-auto toast-enter`}>
           {icons[t.type]}
           <p className="text-sm text-slate-700 font-medium">{t.message}</p>
         </div>

@@ -28,17 +28,13 @@ interface EntradaHistorial {
 
 function estadoBadge(estado: string) {
   const map: Record<string, string> = {
-    Pendiente: "bg-yellow-100 text-yellow-800",
-    Confirmado: "bg-green-100 text-green-800",
-    Realizado: "bg-teal-100 text-teal-800",
-    Ausente: "bg-orange-100 text-orange-700",
-    Cancelado: "bg-red-100 text-red-700",
+    Pendiente: "badge-yellow",
+    Confirmado: "badge-green",
+    Realizado: "badge-teal",
+    Ausente: "badge-orange",
+    Cancelado: "badge-red",
   };
-  return (
-    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${map[estado] ?? "bg-gray-100 text-gray-600"}`}>
-      {estado}
-    </span>
-  );
+  return <span className={`badge ${map[estado] ?? "badge-gray"}`}>{estado}</span>;
 }
 
 function formatFecha(iso: string) {
@@ -143,20 +139,20 @@ function HistorialPaciente() {
           value={busqueda}
           onChange={e => setBusqueda(e.target.value)}
         />
-        {loadingPacientes && <p className="text-xs text-gray-400 mt-1">Buscando...</p>}
+        {loadingPacientes && <p className="text-xs text-slate-400 mt-1">Buscando...</p>}
         {pacientes.length > 0 && (
-          <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 divide-y divide-gray-100">
+          <ul className="absolute z-10 w-full bg-white border border-slate-200 rounded-xl shadow-lg mt-1 divide-y divide-slate-100">
             {pacientes.map(p => (
               <li key={p.id}>
                 <button
                   onClick={() => seleccionarPaciente(p)}
-                  className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm"
+                  className="w-full text-left px-4 py-2.5 hover:bg-slate-50 text-sm transition-colors"
                 >
-                  <span className="font-semibold text-gray-800">{p.apellido}, {p.nombre}</span>
-                  <span className="ml-2 text-gray-400 text-xs">DNI {p.dni}</span>
+                  <span className="font-semibold text-slate-800">{p.apellido}, {p.nombre}</span>
+                  <span className="ml-2 text-slate-400 text-xs">DNI {p.dni}</span>
                   {p.datos_verificados
-                    ? <span className="ml-2 text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">Verificado</span>
-                    : <span className="ml-2 text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full">Sin verificar</span>}
+                    ? <span className="badge badge-green ml-2">Verificado</span>
+                    : <span className="badge badge-yellow ml-2">Sin verificar</span>}
                 </button>
               </li>
             ))}
@@ -170,17 +166,17 @@ function HistorialPaciente() {
           <div className="flex items-start justify-between mb-4 flex-wrap gap-2">
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-lg font-bold text-gray-800">
+                <h2 className="text-lg font-bold text-slate-800">
                   {pacienteSeleccionado.apellido}, {pacienteSeleccionado.nombre}
                 </h2>
                 {pacienteSeleccionado.datos_verificados
-                  ? <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Datos verificados</span>
-                  : <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-medium">Sin verificar</span>}
+                  ? <span className="badge badge-green">Datos verificados</span>
+                  : <span className="badge badge-yellow">Sin verificar</span>}
               </div>
-              <p className="text-sm text-gray-400">DNI {pacienteSeleccionado.dni} · {pacienteSeleccionado.nombre_cobertura ?? "Sin cobertura"}</p>
+              <p className="text-sm text-slate-400">DNI {pacienteSeleccionado.dni} · {pacienteSeleccionado.nombre_cobertura ?? "Sin cobertura"}</p>
             </div>
             <div className="flex items-center gap-3">
-              <label className="flex items-center gap-1.5 text-sm text-gray-500 cursor-pointer">
+              <label className="flex items-center gap-1.5 text-sm text-slate-500 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={mostrarCancelados}
@@ -191,7 +187,7 @@ function HistorialPaciente() {
               </label>
               <button
                 onClick={() => { setPacienteSeleccionado(null); setHistorial([]); setMostrarCancelados(false); }}
-                className="text-sm text-gray-400 hover:text-gray-600"
+                className="text-sm text-slate-400 hover:text-slate-600 transition-colors"
               >
                 ✕ Cambiar
               </button>
@@ -199,9 +195,15 @@ function HistorialPaciente() {
           </div>
 
           {loadingHistorial ? (
-            <p className="text-gray-400 text-sm">Cargando historial...</p>
+            <div className="flex items-center gap-3 py-6 text-slate-400">
+              <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              <span className="text-sm">Cargando historial...</span>
+            </div>
           ) : historial.length === 0 ? (
-            <div className="card text-center py-8 text-gray-400 text-sm">
+            <div className="card text-center py-8 text-slate-400 text-sm">
               Sin turnos registrados para este paciente.
             </div>
           ) : (
@@ -216,39 +218,39 @@ function HistorialPaciente() {
                     }}
                   >
                     <div>
-                      <p className="font-semibold text-gray-800 text-sm">
+                      <p className="font-semibold text-slate-800 text-sm">
                         {formatFecha(entrada.fecha)} — {entrada.hora}
                       </p>
-                      <p className="text-sm text-gray-500 mt-0.5">
+                      <p className="text-sm text-slate-500 mt-0.5">
                         {entrada.especialidad} · {entrada.medico}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-4">
                       {estadoBadge(entrada.estado)}
                       {entrada.nota_medico && (
-                        <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">
+                        <span className="badge badge-blue">
                           Nota médica
                         </span>
                       )}
-                      <span className="text-gray-400 text-xs">{expandido === entrada.id_turno ? "▲" : "▼"}</span>
+                      <span className="text-slate-400 text-xs">{expandido === entrada.id_turno ? "▲" : "▼"}</span>
                     </div>
                   </div>
 
                   {expandido === entrada.id_turno && (
-                    <div className="mt-3 pt-3 border-t border-gray-100 space-y-2 text-sm">
-                      <p className="text-gray-500"><span className="font-medium text-gray-700">Cobertura:</span> {entrada.cobertura}</p>
+                    <div className="mt-3 pt-3 border-t border-slate-100 space-y-2 text-sm">
+                      <p className="text-slate-500"><span className="font-medium text-slate-700">Cobertura:</span> {entrada.cobertura}</p>
                       {entrada.nota_paciente && (
-                        <p className="text-gray-500">
-                          <span className="font-medium text-gray-700">Motivo de consulta:</span> {entrada.nota_paciente}
+                        <p className="text-slate-500">
+                          <span className="font-medium text-slate-700">Motivo de consulta:</span> {entrada.nota_paciente}
                         </p>
                       )}
                       <div className="mt-2">
                         <div className="flex items-center justify-between mb-1">
-                          <p className="font-medium text-gray-700">Nota clínica:</p>
+                          <p className="font-medium text-slate-700">Nota clínica:</p>
                           {user?.rol === "Medico" && editandoNota !== entrada.id_turno && (
                             <button
                               onClick={() => abrirEditarNota(entrada)}
-                              className="text-xs text-indigo-600 hover:underline"
+                              className="text-xs text-brand-700 hover:text-brand-900 font-medium transition-colors"
                             >
                               {entrada.nota_medico ? "Editar" : "+ Agregar nota"}
                             </button>
@@ -258,7 +260,7 @@ function HistorialPaciente() {
                         {editandoNota === entrada.id_turno ? (
                           <div>
                             <textarea
-                              className="w-full border border-indigo-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"
+                              className="w-full border border-brand-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-300 resize-none"
                               rows={4}
                               placeholder="Diagnóstico, indicaciones, observaciones..."
                               value={notaTexto}
@@ -281,11 +283,11 @@ function HistorialPaciente() {
                             </div>
                           </div>
                         ) : entrada.nota_medico ? (
-                          <p className="text-gray-700 bg-indigo-50 rounded-lg px-3 py-2 leading-relaxed whitespace-pre-wrap">
+                          <p className="text-slate-700 bg-brand-50 rounded-lg px-3 py-2 leading-relaxed whitespace-pre-wrap">
                             {entrada.nota_medico}
                           </p>
                         ) : (
-                          <p className="text-gray-400 italic text-xs">Sin nota clínica registrada.</p>
+                          <p className="text-slate-400 italic text-xs">Sin nota clínica registrada.</p>
                         )}
                       </div>
                     </div>
@@ -296,7 +298,7 @@ function HistorialPaciente() {
           )}
 
           {Math.ceil(historial.length / POR_PAGINA) > 1 && (
-            <div className="flex items-center justify-between mt-4 text-sm text-gray-500">
+            <div className="flex items-center justify-between mt-4 text-sm text-slate-500">
               <button
                 onClick={() => setPagina(p => Math.max(1, p - 1))}
                 disabled={pagina === 1}

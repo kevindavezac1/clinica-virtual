@@ -19,8 +19,8 @@ export default function ConfirmDialog({
 }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
-      <div className="relative bg-white rounded-2xl shadow-xl border border-slate-100 p-6 max-w-sm w-full mx-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-white rounded-2xl shadow-card-lg border border-slate-100 p-6 max-w-sm w-full mx-4">
         <p className="text-slate-800 font-medium text-center mb-6">{message}</p>
         <div className="flex gap-3">
           <button onClick={onCancel} className="btn-secondary flex-1">
